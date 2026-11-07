@@ -179,7 +179,8 @@ ACT.theme = () => { applyTheme(document.documentElement.dataset.theme === 'dark'
    AUTENTIKASI
    ============================================================ */
 function authShell(inner) {
-  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><i class="bi bi-patch-check-fill"></i></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>Portal Simulasi CAT & Evaluasi Kompetensi</small></div></div><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div><div class="auth-card card">' + inner + '</div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + ' · Akses terbatas untuk peserta yang disetujui admin</div></div>';
+  const showBtn = !isStandalone() && !!deferredPwaPrompt;
+  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><i class="bi bi-patch-check-fill"></i></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>Portal Simulasi CAT & Evaluasi Kompetensi</small></div></div><div class="row gap-s"><button class="btn sm primary pwa-install-btn ' + (showBtn ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-download"></i> Instal Aplikasi</button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div></div><div class="auth-card card">' + inner + '</div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + ' · Akses terbatas untuk peserta yang disetujui admin</div></div>';
 }
 function fld(label, name, o) {
   o = o || {};
@@ -285,7 +286,7 @@ function mountShell() {
   $('#app').innerHTML = '<aside class="side" id="side"><div class="brand"><span class="brand-i"><i class="bi bi-patch-check-fill"></i></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>' + (isAdmin() ? 'Panel Admin' : 'Simulasi CAT') + '</small></div></div><nav class="nav" aria-label="Menu utama">' +
     menu.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '" title="' + m[1] + '"><i class="bi ' + m[2] + '"></i><span class="lbl">' + m[1] + '</span>' + (m[0] === 'peserta' ? '<span class="badge hide" id="bdgPeserta"></span>' : '') + '</button>').join('') +
     '</nav><div class="side-user">' + avatar(S.user.nama) + '<div><b>' + esc(S.user.nama) + '</b><small>' + (isAdmin() ? 'Superadmin' : 'Peserta Aktif') + '</small></div><button class="icon-btn" data-act="logout" aria-label="Keluar" title="Keluar"><i class="bi bi-box-arrow-right"></i></button></div></aside><div class="scrim" id="scrim" data-act="drawer"></div>' +
-    '<div class="main"><header class="top"><button class="icon-btn menu" data-act="drawer" aria-label="Menu"><i class="bi bi-list" style="font-size:22px"></i></button><h4 id="ttl">Beranda</h4><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button><button class="icon-btn top-prof" data-act="nav" data-arg="profil" aria-label="Profil" title="Profil">' + avatar(S.user.nama) + '</button></header><main class="view" id="view"></main><nav class="bnav" id="bnav" aria-label="Navigasi bawah">' + bnav + '</nav></div>';
+    '<div class="main"><header class="top"><button class="icon-btn menu" data-act="drawer" aria-label="Menu"><i class="bi bi-list" style="font-size:22px"></i></button><h4 id="ttl">Beranda</h4><button class="btn sm ghost pwa-install-btn ' + (!isStandalone() && deferredPwaPrompt ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-phone"></i><span class="pwa-lbl"> Instal</span></button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button><button class="icon-btn top-prof" data-act="nav" data-arg="profil" aria-label="Profil" title="Profil">' + avatar(S.user.nama) + '</button></header><main class="view" id="view"></main><nav class="bnav" id="bnav" aria-label="Navigasi bawah">' + bnav + '</nav></div>';
 }
 ACT.drawer = () => { $('#side').classList.toggle('open'); $('#scrim').classList.toggle('on'); };
 ACT.nav = p => go(p);
@@ -1213,4 +1214,52 @@ ACT.emailLog = async () => {
     const d = await call('logEmail', {}); hideLoader();
     openModal({ title: 'Log Email Terbaru', size: 'wide', body: d.length ? '<div class="tw"><table class="tbl" style="min-width:0"><thead><tr><th>Waktu</th><th>Tujuan</th><th>Jenis</th><th>Status</th></tr></thead><tbody>' + d.map(r => '<tr><td>' + fmtDT(r.waktu) + '</td><td>' + esc(r.tujuan) + '</td><td>' + esc(r.jenis) + '</td><td>' + stChip(r.status) + '</td></tr>').join('') + '</tbody></table></div>' : empty('bi-envelope', 'Belum ada email', ''), foot: '<button class="btn primary" data-act="closeModal">Tutup</button>' });
   } catch (e) { hideLoader(); toast(e.message, 'bad'); }
+};
+
+
+/* ---------- PWA & Instalasi Aplikasi di HP ---------- */
+let deferredPwaPrompt = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  syncPwaBtn();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaPrompt = null;
+  syncPwaBtn();
+  toast('Aplikasi berhasil diinstal di perangkat Anda!', 'ok');
+});
+
+function syncPwaBtn() {
+  $$('.pwa-install-btn').forEach(b => {
+    b.classList.toggle('hide', isStandalone() || !deferredPwaPrompt);
+  });
+}
+
+ACT.pwaInstall = async () => {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    const { outcome } = await deferredPwaPrompt.userChoice;
+    if (outcome === 'accepted') deferredPwaPrompt = null;
+    syncPwaBtn();
+  } else {
+    openModal({
+      title: 'Instal Aplikasi di HP',
+      body: '<p class="sm">Untuk menginstal aplikasi ini di layar utama HP Anda:</p>' +
+        '<ul class="sm mt-s" style="padding-left:18px;line-height:24px">' +
+        '<li><b>Android (Chrome):</b> Ketuk ikon menu <b>⋮</b> di pojok kanan atas browser, lalu pilih <b>Tambahkan ke layar utama (Install app)</b>.</li>' +
+        '<li><b>iPhone / iPad (Safari):</b> Ketuk ikon <b>Bagikan (Share)</b> di bagian bawah layar, lalu pilih <b>Tambah ke Layar Utama (Add to Home Screen)</b>.</li>' +
+        '</ul>',
+      foot: '<button class="btn primary" data-act="closeModal">Mengerti</button>'
+    });
+  }
 };

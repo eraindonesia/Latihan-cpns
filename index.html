@@ -2,11 +2,22 @@
 <html lang="id" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" id="metaTheme" content="#6b5bc4">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Aplikasi Latihan CPNS</title>
   <script>
     /* Terapkan tema tersimpan sebelum render agar tidak berkedip */
-    try { var t = localStorage.getItem('cpns_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+    try {
+      var t = localStorage.getItem('cpns_theme');
+      if (t) {
+        document.documentElement.setAttribute('data-theme', t);
+        var mt = document.getElementById('metaTheme');
+        if (mt) mt.setAttribute('content', t === 'dark' ? '#211d3d' : '#6b5bc4');
+      }
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

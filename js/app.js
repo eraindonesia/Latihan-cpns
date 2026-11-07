@@ -167,7 +167,12 @@ ACT.showImg = async (id, el) => {
 };
 
 /* ---------- Tema ---------- */
-function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); lsSet('cpns_theme', t); }
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  lsSet('cpns_theme', t);
+  const mt = document.getElementById('metaTheme');
+  if (mt) mt.setAttribute('content', t === 'dark' ? '#211d3d' : '#6b5bc4');
+}
 ACT.theme = () => { applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); if (S.user && !S.exam) go(S.page, S.params); };
 
 /* ============================================================
@@ -262,14 +267,25 @@ ACT.logout = async () => {
    ============================================================ */
 const MENU_P = [['beranda', 'Beranda', 'bi-house-door'], ['paket', 'Latihan & Paket', 'bi-journal-check'], ['riwayat', 'Riwayat', 'bi-clock-history'], ['peringkat', 'Peringkat', 'bi-trophy'], ['materi', 'Materi Belajar', 'bi-book'], ['profil', 'Profil', 'bi-person-circle']];
 const MENU_A = [['adminDash', 'Dasbor', 'bi-grid'], ['peserta', 'Peserta', 'bi-people'], ['soal', 'Bank Soal', 'bi-question-circle'], ['paketAdmin', 'Paket & Tryout', 'bi-layers'], ['materiAdmin', 'Materi', 'bi-book'], ['peringkat', 'Peringkat', 'bi-trophy'], ['laporan', 'Laporan', 'bi-bar-chart-line'], ['pengaturan', 'Pengaturan', 'bi-gear'], ['paket', 'Uji Coba Latihan', 'bi-play-circle'], ['profil', 'Profil', 'bi-person-circle']];
+const BNAV_P = [['beranda', 'Beranda', 'bi-house-door'], ['paket', 'Latihan', 'bi-journal-check'], ['riwayat', 'Riwayat', 'bi-clock-history'], ['peringkat', 'Peringkat', 'bi-trophy'], ['materi', 'Materi', 'bi-book']];
+const BNAV_A = [['adminDash', 'Dasbor', 'bi-grid'], ['peserta', 'Peserta', 'bi-people'], ['soal', 'Soal', 'bi-question-circle'], ['paketAdmin', 'Paket', 'bi-layers']];
 const TITLES = { beranda: 'Beranda', paket: 'Latihan & Paket', riwayat: 'Riwayat & Grafik', peringkat: 'Papan Peringkat', materi: 'Materi Belajar', profil: 'Profil', hasil: 'Hasil & Pembahasan', adminDash: 'Dasbor Administrasi', peserta: 'Peserta & Persetujuan', soal: 'Bank Soal', paketAdmin: 'Paket & Tryout', materiAdmin: 'Materi Belajar', laporan: 'Laporan & Analitik', pengaturan: 'Pengaturan Sistem' };
 const PARENT = { hasil: 'riwayat' };
+function syncPesertaBadge(n) {
+  ['#bdgPeserta', '#bdgPesertaMob'].forEach(sel => {
+    const bd = $(sel);
+    if (bd) { bd.textContent = n; bd.classList.toggle('hide', !n); }
+  });
+}
 function mountShell() {
   const menu = isAdmin() ? MENU_A : MENU_P;
+  const bnav = isAdmin()
+    ? BNAV_A.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '"><i class="bi ' + m[2] + '"></i><span>' + m[1] + '</span>' + (m[0] === 'peserta' ? '<b class="bnav-bdg hide" id="bdgPesertaMob"></b>' : '') + '</button>').join('') + '<button data-act="drawer" aria-label="Menu lainnya"><i class="bi bi-grid-3x3-gap"></i><span>Lainnya</span></button>'
+    : BNAV_P.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '"><i class="bi ' + m[2] + '"></i><span>' + m[1] + '</span></button>').join('');
   $('#app').innerHTML = '<aside class="side" id="side"><div class="brand"><span class="brand-i"><i class="bi bi-patch-check-fill"></i></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>' + (isAdmin() ? 'Panel Admin' : 'Simulasi CAT') + '</small></div></div><nav class="nav" aria-label="Menu utama">' +
     menu.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '" title="' + m[1] + '"><i class="bi ' + m[2] + '"></i><span class="lbl">' + m[1] + '</span>' + (m[0] === 'peserta' ? '<span class="badge hide" id="bdgPeserta"></span>' : '') + '</button>').join('') +
     '</nav><div class="side-user">' + avatar(S.user.nama) + '<div><b>' + esc(S.user.nama) + '</b><small>' + (isAdmin() ? 'Superadmin' : 'Peserta Aktif') + '</small></div><button class="icon-btn" data-act="logout" aria-label="Keluar" title="Keluar"><i class="bi bi-box-arrow-right"></i></button></div></aside><div class="scrim" id="scrim" data-act="drawer"></div>' +
-    '<div class="main"><header class="top"><button class="icon-btn menu" data-act="drawer" aria-label="Menu"><i class="bi bi-list" style="font-size:22px"></i></button><h4 id="ttl">Beranda</h4><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button>' + avatar(S.user.nama) + '</header><main class="view" id="view"></main></div>';
+    '<div class="main"><header class="top"><button class="icon-btn menu" data-act="drawer" aria-label="Menu"><i class="bi bi-list" style="font-size:22px"></i></button><h4 id="ttl">Beranda</h4><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button><button class="icon-btn top-prof" data-act="nav" data-arg="profil" aria-label="Profil" title="Profil">' + avatar(S.user.nama) + '</button></header><main class="view" id="view"></main><nav class="bnav" id="bnav" aria-label="Navigasi bawah">' + bnav + '</nav></div>';
 }
 ACT.drawer = () => { $('#side').classList.toggle('open'); $('#scrim').classList.toggle('on'); };
 ACT.nav = p => go(p);
@@ -281,6 +297,7 @@ function go(page, params) {
   const side = $('#side'); if (side) { side.classList.remove('open'); $('#scrim').classList.remove('on'); }
   const act = PARENT[page] ? (isAdmin() ? 'laporan' : PARENT[page]) : page;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.p === act));
+  $$('#bnav button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === act));
   const t = $('#ttl'); if (t) t.textContent = TITLES[page] || '';
   const v = $('#view'); v.innerHTML = skel(6); window.scrollTo(0, 0);
   try { VIEWS[page](S.params); } catch (e) { viewError(e); }
@@ -421,14 +438,37 @@ function persistExam() { const e = S.exam; if (!e) return; lsSet('exam_' + e.ses
 function mountExam() {
   const e = S.exam; destroyCharts(); closeModal(); window.scrollTo(0, 0);
   $('#app').innerHTML = '<div class="exam"><header class="ex-top"><div class="ex-title"><b>' + esc(e.sesi.nama) + '</b><small class="muted" id="exProg"></small></div><div class="timer" id="timer" role="timer" aria-live="off"><i class="bi bi-stopwatch"></i><span id="tmv">--:--:--</span></div>' +
-    '<button class="btn ghost sm" data-act="exLeave"><i class="bi bi-box-arrow-left"></i><span class="t"> Keluar</span></button><button class="btn primary sm" data-act="exFinish"><i class="bi bi-send"></i><span class="t"> Selesai</span></button></header>' +
+    '<button class="btn ghost sm" data-act="exLeave" aria-label="Keluar sementara"><i class="bi bi-box-arrow-left"></i><span class="t"> Keluar</span></button><button class="btn primary sm" data-act="exFinish" aria-label="Selesai ujian"><i class="bi bi-send"></i><span class="t"> Selesai</span></button></header>' +
+    '<div class="ex-scrim" id="exScrim" data-act="exSide"></div>' +
     '<div class="ex-body"><section class="card ex-main" id="exMain" aria-live="polite"></section><aside class="card ex-side" id="exSide"><div class="row"><h4 class="sp">Navigasi Soal</h4><button class="icon-btn fabx" data-act="exSide" aria-label="Tutup"><i class="bi bi-x-lg"></i></button></div><div class="muted sm" id="exCount"></div><div class="qgrid" id="qgrid"></div><div class="lg"><span><i style="background:var(--pri);border-color:var(--pri)"></i>Terjawab</span><span><i style="background:var(--warn);border-color:var(--warn)"></i>Ragu-ragu</span><span><i></i>Kosong</span></div><button class="btn primary block mt" data-act="exFinish"><i class="bi bi-send"></i> Selesai & Kirim</button></aside></div>' +
-    '<button class="btn primary fab-nums" data-act="exSide"><i class="bi bi-grid-3x3-gap"></i> <span id="fabTxt"></span></button></div>';
+    '<div class="ex-bbar" id="exBbar">' +
+      '<button class="btn ghost sm" id="mbPrev" data-act="exPrev" aria-label="Soal sebelumnya"><i class="bi bi-chevron-left"></i></button>' +
+      '<button class="btn ghost sm" id="mbFlag" data-act="exFlag" aria-label="Ragu-ragu"><i class="bi bi-flag" id="mbFlagIco"></i><span>Ragu</span></button>' +
+      '<button class="btn ghost sm ex-bgrid" data-act="exSide" aria-label="Navigasi nomor soal"><i class="bi bi-grid-3x3-gap"></i> <span id="fabTxt"></span></button>' +
+      '<button class="btn primary sm" id="mbNext" data-act="exNext"><span id="mbNextTxt">Berikutnya</span> <i class="bi bi-chevron-right" id="mbNextIco"></i></button>' +
+    '</div></div>';
+  initExamSwipe();
   renderQ(); renderSide(); tickExam();
   clearInterval(examTick); examTick = setInterval(tickExam, 500);
   window.addEventListener('beforeunload', onBeforeUnload);
   document.removeEventListener('keydown', examKeys); document.addEventListener('keydown', examKeys);
   scheduleSave();
+}
+function initExamSwipe() {
+  const box = $('#exMain'); if (!box) return;
+  let sx = 0, sy = 0;
+  box.addEventListener('touchstart', ev => {
+    if (ev.touches.length === 1) { sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; }
+  }, { passive: true });
+  box.addEventListener('touchend', ev => {
+    if (!S.exam || !sx || ev.changedTouches.length !== 1) return;
+    const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy;
+    sx = 0; sy = 0;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      if (dx < 0 && S.exam.idx < S.exam.soal.length - 1) examGo(S.exam.idx + 1);
+      else if (dx > 0 && S.exam.idx > 0) examGo(S.exam.idx - 1);
+    }
+  }, { passive: true });
 }
 function tickExam() {
   const e = S.exam; if (!e) return;
@@ -455,12 +495,21 @@ function renderSide() {
   $('#exProg').textContent = 'Soal ' + (e.idx + 1) + ' dari ' + n;
 }
 function renderQ() {
-  const e = S.exam, q = e.soal[e.idx], ord = e.perm[q.id], sel = e.ans[q.id], n = e.soal.length;
-  $('#exMain').innerHTML = '<div class="row wrap"><span class="kbadge">' + (e.idx + 1) + '</span>' + katChip(q.kat) + (q.sub ? '<span class="chip s-draft">' + esc(q.sub) + '</span>' : '') + '<span class="sp"></span><button class="btn sm ' + (e.flag[q.id] ? 'primary' : 'ghost') + '" data-act="exFlag" aria-pressed="' + !!e.flag[q.id] + '"><i class="bi bi-flag' + (e.flag[q.id] ? '-fill' : '') + '"></i> Ragu-ragu</button></div>' +
+  const e = S.exam, q = e.soal[e.idx], ord = e.perm[q.id], sel = e.ans[q.id], n = e.soal.length, isFl = !!e.flag[q.id];
+  $('#exMain').innerHTML = '<div class="row wrap"><span class="kbadge">' + (e.idx + 1) + '</span>' + katChip(q.kat) + (q.sub ? '<span class="chip s-draft">' + esc(q.sub) + '</span>' : '') + '<span class="sp"></span><button class="btn sm ' + (isFl ? 'primary' : 'ghost') + '" data-act="exFlag" aria-pressed="' + isFl + '"><i class="bi bi-flag' + (isFl ? '-fill' : '') + '"></i> Ragu-ragu</button></div>' +
     '<div class="qt">' + esc(q.q) + '</div>' + (q.img ? '<div id="img_' + q.id + '"><span class="muted sm">Memuat gambar…</span></div>' : '') +
     '<div role="radiogroup" aria-label="Pilihan jawaban">' + ord.map((L, i) => '<button class="opt ' + (sel === L ? 'on' : '') + '" role="radio" aria-checked="' + (sel === L) + '" data-act="exPick" data-arg="' + L + '"><span class="ol">' + LET[i] + '</span><span class="ot">' + esc(q.o[L]) + '</span></button>').join('') + '</div>' +
     '<div class="ex-nav"><button class="btn ghost" data-act="exPrev" ' + (e.idx === 0 ? 'disabled' : '') + '><i class="bi bi-chevron-left"></i> Sebelumnya</button><button class="btn ghost" data-act="exClear" ' + (sel ? '' : 'disabled') + '>Hapus Jawaban</button><span class="sp"></span>' +
-    (e.idx < n - 1 ? '<button class="btn primary" data-act="exNext">Berikutnya <i class="bi bi-chevron-right"></i></button>' : '<button class="btn primary" data-act="exFinish"><i class="bi bi-send"></i> Selesai</button>') + '</div>';
+    (e.idx < n - 1 ? '<button class="btn primary" data-act="exNext">Berikutnya <i class="bi bi-chevron-right"></i></button>' : '<button class="btn primary" data-act="exFinish"><i class="bi bi-send"></i> Selesai</button>') + '</div>' +
+    '<div class="mob-swipe-hint"><i class="bi bi-arrow-left-right"></i> Geser kiri/kanan untuk pindah soal</div>';
+  const mbPrev = $('#mbPrev'); if (mbPrev) mbPrev.disabled = (e.idx === 0);
+  const mbFlag = $('#mbFlag'); if (mbFlag) { mbFlag.className = 'btn sm ' + (isFl ? 'flag-on' : 'ghost'); $('#mbFlagIco').className = 'bi bi-flag' + (isFl ? '-fill' : ''); }
+  const mbNext = $('#mbNext'); if (mbNext) {
+    const last = e.idx >= n - 1;
+    mbNext.dataset.act = last ? 'exFinish' : 'exNext';
+    $('#mbNextTxt').textContent = last ? 'Selesai' : 'Berikutnya';
+    $('#mbNextIco').className = 'bi ' + (last ? 'bi-send' : 'bi-chevron-right');
+  }
   if (q.img) ACT.showImg(q.id);
   const nx = e.soal[e.idx + 1]; if (nx && nx.img) imgLoad(nx.id).catch(() => {});
 }
@@ -468,12 +517,14 @@ function examGo(i) {
   const e = S.exam; if (!e) return;
   e.idx = Math.max(0, Math.min(e.soal.length - 1, i)); persistExam(); renderQ(); renderSide();
   const m = $('#exMain'); if (m) { const r = m.getBoundingClientRect(); if (r.top < 0) window.scrollTo(0, 0); }
-  const s = $('#exSide'); if (s) s.classList.remove('open');
+  const s = $('#exSide'), sc = $('#exScrim');
+  if (s) s.classList.remove('open');
+  if (sc) sc.classList.remove('on');
 }
 ACT.exGo = i => examGo(+i);
 ACT.exPrev = () => examGo(S.exam.idx - 1);
 ACT.exNext = () => examGo(S.exam.idx + 1);
-ACT.exSide = () => $('#exSide').classList.toggle('open');
+ACT.exSide = () => { $('#exSide').classList.toggle('open'); const sc = $('#exScrim'); if (sc) sc.classList.toggle('on'); };
 ACT.exPick = L => {
   const e = S.exam; if (!e || e.submitting) return; const q = e.soal[e.idx];
   e.ans[q.id] = L; e.dirty = true; persistExam();
@@ -726,7 +777,7 @@ function bulkBar(o, html) { const n = selCount(o); return n ? '<div class="bulk"
    ============================================================ */
 VIEWS.adminDash = () => swr('adash', 'adminDash', {}, d => {
   if (S.page !== 'adminDash') return;
-  const bd = $('#bdgPeserta'); if (bd) { bd.textContent = d.menunggu; bd.classList.toggle('hide', !d.menunggu); }
+  syncPesertaBadge(d.menunggu);
   $('#view').innerHTML = pageHead('Dasbor', 'Dasbor Administrasi', 'Ringkasan aktivitas peserta dan kesehatan sistem.', '<button class="btn primary" data-act="soalForm"><i class="bi bi-plus-lg"></i> Tambah Soal</button>') +
     '<div class="g5 keep2 mb">' + kpi('Total Peserta', nf(d.totalPeserta), nf(d.aktif) + ' aktif', 'bi-people') + kpi('Menunggu Persetujuan', nf(d.menunggu), d.menunggu ? 'Perlu ditinjau' : 'Semua sudah diproses', 'bi-hourglass-split', 'twk') + kpi('Soal Aktif', nf(d.soalAktif), 'TWK ' + d.soalKat.TWK + ' · TIU ' + d.soalKat.TIU + ' · TKP ' + d.soalKat.TKP, 'bi-question-circle', 'tiu') + kpi('Latihan Hari Ini', nf(d.latihanHariIni), 'Sesi selesai', 'bi-lightning-charge', 'tkp') + kpi('Rata-rata Skor', nf(d.rata), 'Lulus ' + d.lulusPct + '%', 'bi-graph-up') + '</div>' +
     '<div class="g-main mb"><div class="card pad"><div class="row"><h4 class="sp">Aktivitas 7 Hari Terakhir</h4></div>' + chartBox('chAct', 260) + '</div><div class="card pad"><h4 class="mb">Rata-rata per Kategori</h4>' +
@@ -755,7 +806,7 @@ function loadPeserta() {
   const nav = S.nav;
   return call('pesertaList', S.st.ps).then(d => {
     if (nav !== S.nav) return; S.psData = d; drawPeserta();
-    const bd = $('#bdgPeserta'); if (bd) { bd.textContent = d.cnt.Menunggu; bd.classList.toggle('hide', !d.cnt.Menunggu); }
+    syncPesertaBadge(d.cnt.Menunggu);
   }).catch(e => { if (nav === S.nav) viewError(e); });
 }
 function drawPeserta() {

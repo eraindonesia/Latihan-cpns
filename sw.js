@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cpns-cat-pwa-v1';
+const CACHE_NAME = 'cpns-cat-pwa-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,8 +6,11 @@ const ASSETS = [
   './css/style.css',
   './js/config.js',
   './js/app.js',
+  './icons/favicon.png',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-512-maskable.png',
+  './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -27,10 +30,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const req = event.request;
-  // Jangan intercept request POST API ke Google Apps Script
   if (req.method !== 'GET' || req.url.includes('script.google.com')) return;
 
-  // Network-first dengan fallback ke Cache agar update UI selalu langsung tampil namun tetap tahan offline
   event.respondWith(
     fetch(req)
       .then(res => {

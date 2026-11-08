@@ -5,6 +5,8 @@
    revalidate), timer & jawaban di perangkat, kirim sekali (batch).
    ============================================================ */
 const S = { token: null, user: null, cfg: {}, page: '', params: {}, nav: 0, charts: {}, st: {}, imgs: {}, exam: null };
+let deferredPwaPrompt = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const ACT = {}, CHG = {}, INP = {}, SUB = {}, VIEWS = {};
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -1535,8 +1537,8 @@ ACT.emailLog = async () => {
 
 
 /* ---------- PWA & Instalasi Aplikasi di HP ---------- */
-let deferredPwaPrompt = null;
-const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

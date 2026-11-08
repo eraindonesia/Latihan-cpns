@@ -402,3 +402,7 @@ tr.me td { background:var(--info-bg) !important; } tr.sub td { background:var(--
 }
 @media print { .side,.top,.btn,.icon-btn { display:none !important; } .main { margin:0; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+.edu-note { display:flex; gap:10px; align-items:flex-start; margin-top:18px; padding:11px 13px; border-radius:12px; background:var(--soft); border:1px solid var(--line); color:var(--ink2); font-size:12px; line-height:17px; }
+.edu-note i { color:var(--pri); font-size:16px; margin-top:1px; flex:none; }
+.edu-note b { color:var(--ink); }

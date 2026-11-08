@@ -180,7 +180,7 @@ ACT.theme = () => { applyTheme(document.documentElement.dataset.theme === 'dark'
    ============================================================ */
 function authShell(inner) {
   const showBtn = !isStandalone() && !!deferredPwaPrompt;
-  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><img src="' + esc((window.APP_CONFIG && window.APP_CONFIG.LOGO_URL) || 'https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png') + '" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>Portal Simulasi CAT & Evaluasi Kompetensi</small></div></div><div class="row gap-s"><button class="btn sm primary pwa-install-btn ' + (showBtn ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-download"></i> Instal Aplikasi</button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div></div><div class="auth-card card">' + inner + '</div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + ' · Akses terbatas untuk peserta yang disetujui admin</div></div>';
+  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><img src="' + esc((window.APP_CONFIG && window.APP_CONFIG.LOGO_URL) || 'https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png') + '" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Simulasi Mandiri SKD') + '</b><small>Platform Edukasi & Latihan Mandiri CAT</small></div></div><div class="row gap-s"><button class="btn sm primary pwa-install-btn ' + (showBtn ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-download"></i> Instal Aplikasi</button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div></div><div class="auth-card card">' + inner + '<div class="edu-note"><i class="bi bi-shield-check"></i><div><b>Platform Edukasi Independen:</b> Situs ini adalah sarana belajar & simulasi latihan soal mandiri (bukan situs resmi instansi pemerintah/BKN). Gunakan kata sandi khusus untuk akun belajar Anda.</div></div></div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Simulasi Mandiri SKD') + ' · Media Belajar & Evaluasi Kompetensi Mandiri</div></div>';
 }
 function fld(label, name, o) {
   o = o || {};
@@ -1223,7 +1223,7 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=4').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=5').then(reg => {
       reg.update();
     }).catch(() => {});
   });

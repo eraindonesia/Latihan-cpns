@@ -481,3 +481,17 @@ tr.me td { background:var(--info-bg) !important; } tr.sub td { background:var(--
   .ebk-foot { padding:10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); gap:8px; }
   .ebk-foot .hmob { display:none; }
 }
+
+/* ---------- Order CTA di Portal Login & Soal Terkunci di Paket ---------- */
+.order-cta { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; padding:12px 14px; border-radius:12px; background:var(--soft); border:1.5px dashed var(--pri); }
+.order-cta-text { display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:18px; }
+.order-cta-text i { color:var(--pri); font-size:18px; margin-top:2px; flex:none; }
+.order-cta-text b { display:block; color:var(--ink); margin-bottom:2px; }
+.order-cta-text span { color:var(--ink2); word-break:break-word; }
+.order-cta-text a { font-weight:700; text-decoration:underline; }
+.order-cta-btn { white-space:nowrap; flex:none; text-decoration:none; }
+.pick label.pick-locked { opacity:.6; cursor:not-allowed; background:var(--soft); }
+@media (max-width:520px) {
+  .order-cta { flex-direction:column; align-items:stretch; }
+  .order-cta-btn { width:100%; justify-content:center; }
+}

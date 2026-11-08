@@ -1,11 +1,11 @@
-const CACHE_NAME = 'cpns-cat-pwa-v8';
+const CACHE_NAME = 'cpns-cat-pwa-v9';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=8',
-  './css/style.css?v=8',
-  './js/config.js?v=8',
-  './js/app.js?v=8'
+  './manifest.json?v=9',
+  './css/style.css?v=9',
+  './js/config.js?v=9',
+  './js/app.js?v=9'
 ];
 
 self.addEventListener('install', event => {

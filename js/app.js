@@ -251,13 +251,18 @@ function fld(label, name, o) {
 ACT.eye = (id, el) => { const i = document.getElementById(id); i.type = i.type === 'password' ? 'text' : 'password'; el.innerHTML = '<i class="bi bi-eye' + (i.type === 'password' ? '' : '-slash') + '"></i>'; };
 function mountAuth(mode, extra) {
   const ann = S.cfg.pengumuman ? '<div class="banner"><i class="bi bi-megaphone"></i><div>' + esc(S.cfg.pengumuman) + '</div></div>' : '';
+  const orderCta = '<div class="order-cta">' +
+    '<div class="order-cta-text"><i class="bi bi-cart-check-fill"></i><div><b>Belum punya akses akun?</b><span>Bagi yang mau silakan order di sini: <a href="http://lynk.id/mardibda/g4m6rg46kowj" target="_blank" rel="noopener noreferrer">http://lynk.id/mardibda/g4m6rg46kowj</a></span></div></div>' +
+    '<a class="btn primary sm order-cta-btn" href="http://lynk.id/mardibda/g4m6rg46kowj" target="_blank" rel="noopener noreferrer"><i class="bi bi-bag-check"></i> Order di Sini</a>' +
+    '</div>';
   if (mode === 'login') {
     authShell('<h2>Masuk ke Akun</h2><p class="sub">Masuk untuk berlatih soal CPNS (TWK, TIU, TKP).</p>' + ann +
       '<form data-sub="login" novalidate><div class="ferr" role="alert"></div>' + fld('Email', 'email', { type: 'email', icon: 'bi-envelope', ph: 'nama@email.com', ac: 'username' }) + fld('Password', 'password', { type: 'password', icon: 'bi-lock', ph: 'Password Anda', ac: 'current-password' }) +
       '<div class="r mb sm"><button type="button" class="linkb" data-act="authGo" data-arg="forgot">Lupa password?</button></div><button class="btn primary block" type="submit">Masuk <i class="bi bi-arrow-right"></i></button></form>' +
+      orderCta +
       (S.cfg.registrasi_dibuka === 'Ya' ? '<p class="c sm mt">Belum punya akun? <button class="linkb" data-act="authGo" data-arg="register">Ajukan pendaftaran</button></p>' : '<p class="c sm mt muted">Pendaftaran sedang ditutup.</p>'));
   } else if (mode === 'register') {
-    authShell('<h2>Ajukan Pendaftaran</h2><p class="sub">Akun aktif setelah disetujui admin; notifikasi dikirim ke email Anda.</p><form data-sub="register" novalidate><div class="ferr" role="alert"></div>' +
+    authShell('<h2>Ajukan Pendaftaran</h2><p class="sub">Akun aktif setelah disetujui admin; notifikasi dikirim ke email Anda.</p>' + orderCta + '<form data-sub="register" novalidate><div class="ferr" role="alert"></div>' +
       fld('Nama Lengkap', 'nama', { icon: 'bi-person-vcard', ph: 'Contoh: Ahmad Rizky Pratama', ac: 'name' }) + fld('Email Aktif', 'email', { type: 'email', icon: 'bi-envelope', ph: 'ahmad@email.com', ac: 'email', hint: 'Untuk notifikasi persetujuan & hasil latihan' }) +
       fld('Instansi & Formasi Target <span class="muted">(opsional)</span>', 'instansi', { icon: 'bi-building', ph: 'Contoh: Kemenkeu — Analis Kebijakan', req: false }) +
       '<div class="grid2">' + fld('Password', 'password', { type: 'password', icon: 'bi-lock', ac: 'new-password', attr: 'minlength="8" data-inp="pwStrength"' }) + fld('Konfirmasi Password', 'password2', { type: 'password', icon: 'bi-lock-fill', ac: 'new-password' }) + '</div>' +
@@ -1344,53 +1349,172 @@ ACT.paketStatus = async arg => {
 };
 ACT.paketHapus = async id => {
   const p = (S.padm || []).find(x => x.id === id);
-  if (!await confirmBox('Hapus paket <b>' + esc(p ? p.nama : '') + '</b>?<br><span class="muted sm">Riwayat hasil peserta tetap tersimpan.</span>', { danger: true, yes: 'Hapus' })) return;
+  if (!await confirmBox('Hapus paket <b>' + esc(p ? p.nama : '') + '</b>?<br><span class="muted sm">Riwayat hasil peserta tetap tersimpan dan soal di dalamnya dapat digunakan kembali.</span>', { danger: true, yes: 'Hapus' })) return;
   showLoader('Menghapus…');
-  try { await call('paketHapus', { id }); hideLoader(); toast('Paket dihapus.', 'ok'); go('paketAdmin'); } catch (e) { hideLoader(); toast(e.message, 'bad'); }
+  try {
+    await call('paketHapus', { id });
+    delete S.soalRingkas;
+    if (S.padm) { S.padm = S.padm.filter(x => x.id !== id); setLocalCache('padm', S.padm); }
+    hideLoader(); toast('Paket dihapus.', 'ok'); go('paketAdmin');
+  } catch (e) { hideLoader(); toast(e.message, 'bad'); }
 };
-S.pb = { ids: [], q: '', kat: '' };
+S.pb = { ids: [], q: '', kat: '', sub: '', showUsed: false };
+S.pbUsed = {};
+function buildSubtopikOptions() {
+  const kat = S.pb.kat;
+  const set = new Set(S.pb.ids);
+  const counts = {};
+  let noSubCount = 0;
+  (S.soalRingkas || []).forEach(s => {
+    if (kat && s.kat !== kat) return;
+    if (!S.pb.showUsed && S.pbUsed[s.id] && !set.has(s.id)) return;
+    const sub = (s.sub || '').trim();
+    if (sub) counts[sub] = (counts[sub] || 0) + 1;
+    else noSubCount++;
+  });
+  const subs = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'id'));
+  const opts = [['', 'Semua Subtopik']];
+  subs.forEach(sub => opts.push([sub, sub + ' (' + counts[sub] + ')']));
+  if (noSubCount > 0) opts.push(['__NONE__', '— Tanpa Subtopik (' + noSubCount + ') —']);
+  return opts;
+}
+function updateSubtopikDropdown() {
+  const sel = $('#pbSubSel');
+  if (!sel) return;
+  const opts = buildSubtopikOptions();
+  const validValues = opts.map(o => Array.isArray(o) ? o[0] : o);
+  if (S.pb.sub && validValues.indexOf(S.pb.sub) < 0) S.pb.sub = '';
+  sel.innerHTML = opts.map(o => optH(o, S.pb.sub)).join('');
+}
 ACT.paketForm = async id => {
   showLoader('Memuat…');
-  try { if (!S.soalRingkas) S.soalRingkas = await call('soalRingkas', {}); } catch (e) { hideLoader(); return toast(e.message, 'bad'); }
+  try {
+    if (!S.padm) S.padm = await call('paketAdmin', {});
+    if (!S.soalRingkas) S.soalRingkas = await call('soalRingkas', {});
+  } catch (e) { hideLoader(); return toast(e.message, 'bad'); }
   hideLoader();
-  const p = (id && (S.padm || []).find(x => x.id === id)) || { id: '', nama: '', deskripsi: '', jenis: 'Latihan', durasi: +(S.cfg.durasi_default) || 100, status: 'Draft', tgl_mulai: '', tgl_selesai: '', tampil: 'Langsung', acak_soal: 'Ya', acak_opsi: 'Ya', kuota: '', ids: [] };
-  S.pb = { ids: (p.ids || []).slice(), q: '', kat: '' };
+  const curId = id || '';
+  const p = (curId && (S.padm || []).find(x => x.id === curId)) || { id: '', nama: '', deskripsi: '', jenis: 'Latihan', durasi: +(S.cfg.durasi_default) || 100, status: 'Draft', tgl_mulai: '', tgl_selesai: '', tampil: 'Langsung', acak_soal: 'Ya', acak_opsi: 'Ya', kuota: '', ids: [] };
+  const usedMap = {};
+  (S.padm || []).forEach(pk => {
+    if (pk.id !== curId) {
+      (pk.ids || []).forEach(sid => {
+        if (!usedMap[sid]) usedMap[sid] = pk.nama;
+      });
+    }
+  });
+  (S.soalRingkas || []).forEach(s => {
+    if (s.paketId && s.paketId !== curId && !usedMap[s.id]) {
+      usedMap[s.id] = s.paketNama || 'Paket Lain';
+    }
+  });
+  S.pbUsed = usedMap;
+  S.pb = { ids: (p.ids || []).filter(sid => !usedMap[sid]), q: '', kat: '', sub: '', showUsed: false };
+  const usedTotal = Object.keys(usedMap).length;
   openModal({
     title: id ? 'Ubah Paket' : 'Buat Paket Baru', size: 'xl', persist: true,
-    body: '<form id="fPaket" data-sub="paketForm" data-id="' + esc(id || '') + '" novalidate><div class="ferr" role="alert"></div><div class="g-main-r" style="gap:1.5rem"><div>' +
+    body: '<form id="fPaket" data-sub="paketForm" data-id="' + esc(curId) + '" novalidate><div class="ferr" role="alert"></div><div class="g-main-r" style="gap:1.5rem"><div>' +
       fl('Nama Paket', inpH('nama', p.nama, 'required maxlength="120"')) + fl('Deskripsi', '<textarea class="txa" name="deskripsi" rows="2" maxlength="400">' + esc(p.deskripsi) + '</textarea>') +
       '<div class="grid2">' + fl('Jenis', selH('jenis', ['Latihan', 'Tryout'], p.jenis, 'data-chg="pkJenis"')) + fl('Durasi (menit)', inpH('durasi', p.durasi, 'type="number" min="1" max="300" required')) + '</div>' +
       '<div id="pkJadwal" class="grid2 ' + (p.jenis === 'Tryout' ? '' : 'hide') + '">' + fl('Mulai Akses', inpH('tgl_mulai', toLocalInput(p.tgl_mulai), 'type="datetime-local"')) + fl('Tutup Akses', inpH('tgl_selesai', toLocalInput(p.tgl_selesai), 'type="datetime-local"')) + '</div>' +
       '<div class="grid2">' + fl('Status', selH('status', ['Aktif', 'Draft', 'Nonaktif'], p.status)) + fl('Kuota Peserta Tryout', inpH('kuota', p.kuota, 'type="number" min="0" placeholder="Kosong = tanpa batas"')) + '</div>' +
       fl('Tampilkan Pembahasan', selH('tampil', [['Langsung', 'Langsung setelah selesai'], ['Setelah Ditutup', 'Setelah tryout ditutup']], p.tampil)) + swH('acak_soal', 'Acak urutan soal', p.acak_soal !== 'Tidak', 'Urutan diacak di dalam tiap kategori') + swH('acak_opsi', 'Acak urutan opsi', p.acak_opsi !== 'Tidak', 'Hanya TWK & TIU; TKP tidak diacak') +
-      '</div><div><div class="row mb"><b class="sp">Pilih Soal</b><span class="chip s-ok" id="pbCount"></span></div><div class="toolbar mb"><div class="sr"><i class="bi bi-search"></i><input class="inp" placeholder="Cari soal…" data-inp="pbQ" aria-label="Cari soal"></div><select class="sel" data-chg="pbKat" aria-label="Kategori">' + [['', 'Semua'], 'TWK', 'TIU', 'TKP'].map(o => optH(o, '')).join('') + '</select></div><div class="row gap-s mb"><button type="button" class="btn sm ghost" data-act="pbAll">Pilih semua hasil</button><button type="button" class="btn sm ghost" data-act="pbNone">Kosongkan pilihan</button></div><div class="pick" id="pbList"></div></div></div></form>',
+      '</div><div><div class="row mb"><b class="sp">Pilih Soal</b><span class="chip s-ok" id="pbCount"></span></div>' +
+      '<div class="toolbar mb">' +
+        '<div class="sr"><i class="bi bi-search"></i><input class="inp" placeholder="Cari pertanyaan, ID, atau subtopik…" data-inp="pbQ" aria-label="Cari soal"></div>' +
+        '<select class="sel" data-chg="pbKat" aria-label="Kategori">' + [['', 'Semua Kategori'], 'TWK', 'TIU', 'TKP'].map(o => optH(o, '')).join('') + '</select>' +
+        '<select class="sel" id="pbSubSel" data-chg="pbSub" aria-label="Subtopik">' + buildSubtopikOptions().map(o => optH(o, '')).join('') + '</select>' +
+      '</div>' +
+      '<div class="row wrap gap-s mb">' +
+        '<button type="button" class="btn sm ghost" data-act="pbAll">Pilih semua hasil</button>' +
+        '<button type="button" class="btn sm ghost" data-act="pbNone">Kosongkan pilihan</button>' +
+        (usedTotal ? '<label class="chk sm" style="margin-left:auto;padding:2px 0"><input type="checkbox" data-chg="pbShowUsed"><span>Lihat ' + usedTotal + ' soal di paket lain (terkunci)</span></label>' : '') +
+      '</div>' +
+      '<div class="pick" id="pbList"></div></div></div></form>',
     foot: '<button class="btn ghost" data-act="paketTutup">Batal</button><button class="btn primary" type="submit" form="fPaket"><i class="bi bi-check2"></i> Simpan Paket</button>',
-    onOpen: drawPick
+    onOpen: () => { updateSubtopikDropdown(); drawPick(); }
   });
 };
 ACT.paketTutup = async () => { if (await confirmBox('Tutup formulir? Perubahan yang belum disimpan akan hilang.', { yes: 'Tutup', no: 'Lanjut Mengedit' })) closeModal(); };
 CHG.pkJenis = v => { const j = $('#pkJadwal'); if (j) j.classList.toggle('hide', v !== 'Tryout'); };
-function pbFiltered() { const q = S.pb.q.toLowerCase(); return (S.soalRingkas || []).filter(s => (!S.pb.kat || s.kat === S.pb.kat) && (!q || (s.q + ' ' + s.sub + ' ' + s.id).toLowerCase().indexOf(q) >= 0)); }
+function pbFiltered() {
+  const q = S.pb.q.toLowerCase();
+  const sub = S.pb.sub;
+  const set = new Set(S.pb.ids);
+  return (S.soalRingkas || []).filter(s => {
+    const isUsed = !!S.pbUsed[s.id] && !set.has(s.id);
+    if (isUsed && !S.pb.showUsed) return false;
+    if (S.pb.kat && s.kat !== S.pb.kat) return false;
+    const sSub = (s.sub || '').trim();
+    if (sub === '__NONE__' && sSub !== '') return false;
+    if (sub && sub !== '__NONE__' && sSub.toLowerCase() !== sub.toLowerCase()) return false;
+    if (q && (s.q + ' ' + sSub + ' ' + s.id).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
 function drawPick() {
   const box = $('#pbList'); if (!box) return;
-  const set = new Set(S.pb.ids), list = pbFiltered().slice(0, 300);
-  box.innerHTML = list.length ? list.map(s => '<label><input type="checkbox" data-chg="pbSel" data-id="' + s.id + '" ' + (set.has(s.id) ? 'checked' : '') + '><span>' + katChip(s.kat) + ' ' + esc(trunc(s.q, 90)) + (s.sub ? ' <span class="muted sm">· ' + esc(s.sub) + '</span>' : '') + '</span></label>').join('') + (pbFiltered().length > 300 ? '<div class="muted sm" style="padding:10px">Menampilkan 300 pertama — persempit pencarian.</div>' : '') : '<div class="empty" style="padding:20px">Tidak ada soal aktif yang cocok.</div>';
+  const set = new Set(S.pb.ids), allFiltered = pbFiltered(), list = allFiltered.slice(0, 300);
+  box.innerHTML = list.length ? list.map(s => {
+    const usedBy = S.pbUsed[s.id];
+    const locked = !!usedBy && !set.has(s.id);
+    return '<label class="' + (locked ? 'pick-locked' : '') + '">' +
+      '<input type="checkbox" data-chg="pbSel" data-id="' + s.id + '" ' + (set.has(s.id) ? 'checked' : '') + (locked ? ' disabled' : '') + '>' +
+      '<span>' + katChip(s.kat) + (s.sub ? ' <span class="chip s-draft">' + esc(s.sub) + '</span>' : '') + ' ' + esc(trunc(s.q, 85)) +
+      (locked ? ' <span class="chip s-warn"><i class="bi bi-lock-fill"></i> Sudah di: ' + esc(usedBy) + '</span>' : '') +
+      '</span></label>';
+  }).join('') + (allFiltered.length > 300 ? '<div class="muted sm" style="padding:10px">Menampilkan 300 pertama — persempit pencarian atau filter subtopik.</div>' : '') : '<div class="empty" style="padding:20px">Tidak ada soal tersedia yang cocok dengan filter.</div>';
   const map = {}; (S.soalRingkas || []).forEach(s => { map[s.id] = s.kat; });
   const c = { TWK: 0, TIU: 0, TKP: 0 }; S.pb.ids.forEach(i => { if (c[map[i]] !== undefined) c[map[i]]++; });
   const el = $('#pbCount'); if (el) el.textContent = S.pb.ids.length + ' soal (TWK ' + c.TWK + ' · TIU ' + c.TIU + ' · TKP ' + c.TKP + ')';
 }
 INP.pbQ = debounce(v => { S.pb.q = v; drawPick(); }, 200);
-CHG.pbKat = v => { S.pb.kat = v; drawPick(); };
-CHG.pbSel = (on, el) => { const i = el.dataset.id, k = S.pb.ids.indexOf(i); if (on && k < 0) S.pb.ids.push(i); if (!on && k >= 0) S.pb.ids.splice(k, 1); drawPick(); };
-ACT.pbAll = () => { const set = new Set(S.pb.ids); pbFiltered().forEach(s => { if (!set.has(s.id)) S.pb.ids.push(s.id); }); drawPick(); };
-ACT.pbNone = () => { const f = new Set(pbFiltered().map(s => s.id)); S.pb.ids = S.pb.ids.filter(i => !f.has(i)); drawPick(); };
+CHG.pbKat = v => { S.pb.kat = v; updateSubtopikDropdown(); drawPick(); };
+CHG.pbSub = v => { S.pb.sub = v; drawPick(); };
+CHG.pbShowUsed = on => { S.pb.showUsed = !!on; updateSubtopikDropdown(); drawPick(); };
+CHG.pbSel = (on, el) => {
+  const i = el.dataset.id;
+  if (S.pbUsed[i]) {
+    el.checked = false;
+    toast('Soal ini sudah digunakan pada paket "' + S.pbUsed[i] + '" dan tidak dapat ditambahkan lagi.', 'bad');
+    return;
+  }
+  const k = S.pb.ids.indexOf(i);
+  if (on && k < 0) S.pb.ids.push(i);
+  if (!on && k >= 0) S.pb.ids.splice(k, 1);
+  drawPick();
+};
+ACT.pbAll = () => {
+  const set = new Set(S.pb.ids);
+  pbFiltered().forEach(s => {
+    if (!S.pbUsed[s.id] && !set.has(s.id)) S.pb.ids.push(s.id);
+  });
+  drawPick();
+};
+ACT.pbNone = () => {
+  const f = new Set(pbFiltered().map(s => s.id));
+  S.pb.ids = S.pb.ids.filter(i => !f.has(i));
+  drawPick();
+};
 SUB.paketForm = async f => {
   ferr(f, '');
-  const jenis = f.jenis.value, d = { id: f.dataset.id || undefined, nama: f.nama.value, deskripsi: f.deskripsi.value, jenis, durasi: +f.durasi.value, status: f.status.value, ids: S.pb.ids, tampil: f.tampil.value, acak_soal: f.acak_soal.checked ? 'Ya' : 'Tidak', acak_opsi: f.acak_opsi.checked ? 'Ya' : 'Tidak', kuota: f.kuota.value };
+  const cleanIds = S.pb.ids.filter(id => !S.pbUsed[id]);
+  const jenis = f.jenis.value, d = { id: f.dataset.id || undefined, nama: f.nama.value, deskripsi: f.deskripsi.value, jenis, durasi: +f.durasi.value, status: f.status.value, ids: cleanIds, tampil: f.tampil.value, acak_soal: f.acak_soal.checked ? 'Ya' : 'Tidak', acak_opsi: f.acak_opsi.checked ? 'Ya' : 'Tidak', kuota: f.kuota.value };
   if (!d.nama.trim()) return ferr(f, 'Nama paket wajib diisi.');
   if (jenis === 'Tryout') { d.tgl_mulai = f.tgl_mulai.value ? new Date(f.tgl_mulai.value).getTime() : 0; d.tgl_selesai = f.tgl_selesai.value ? new Date(f.tgl_selesai.value).getTime() : 0; if (!d.tgl_mulai || !d.tgl_selesai) return ferr(f, 'Tryout wajib memiliki jadwal mulai dan tutup akses.'); if (d.tgl_selesai <= d.tgl_mulai) return ferr(f, 'Tutup akses harus setelah waktu mulai.'); }
   const b = $('button[type=submit]', $('.mfoot')); setBusy(b, true, 'Menyimpan…');
-  try { await call('paketSimpan', d); S.modalPersist = false; closeModal(); toast('Paket tersimpan.', 'ok'); go('paketAdmin'); }
+  try {
+    const res = await call('paketSimpan', d);
+    delete S.soalRingkas;
+    const savedId = (res && res.id) || d.id;
+    if (S.padm && savedId) {
+      const ex = S.padm.find(x => x.id === savedId);
+      if (ex) { ex.nama = d.nama; ex.ids = cleanIds.slice(); ex.jumlah = cleanIds.length; }
+      else { S.padm.unshift({ id: savedId, nama: d.nama, deskripsi: d.deskripsi, jenis: d.jenis, durasi: d.durasi, status: d.status, ids: cleanIds.slice(), jumlah: cleanIds.length, komp: { TWK: 0, TIU: 0, TKP: 0 }, peserta: 0, rata: null }); }
+      setLocalCache('padm', S.padm);
+    }
+    S.modalPersist = false; closeModal(); toast('Paket tersimpan.', 'ok'); go('paketAdmin');
+  }
   catch (e) { ferr(f, e.message); setBusy(b, false); const m = $('.mbody'); if (m) m.scrollTop = 0; }
 };
 
@@ -1542,7 +1666,7 @@ ACT.emailLog = async () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=7').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=9').then(reg => {
       reg.update();
     }).catch(() => {});
   });

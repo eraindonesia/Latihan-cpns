@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" id="metaTheme" content="#6b5bc4">
+  <meta name="theme-color" id="metaTheme" content="#2eb87e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,7 +15,7 @@
       if (t) {
         document.documentElement.setAttribute('data-theme', t);
         var mt = document.getElementById('metaTheme');
-        if (mt) mt.setAttribute('content', t === 'dark' ? '#211d3d' : '#6b5bc4');
+        if (mt) mt.setAttribute('content', t === 'dark' ? '#162821' : '#2eb87e');
       }
     } catch (e) {}
   </script>
@@ -23,21 +23,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="manifest" href="manifest.json?v=3">
+  <link rel="manifest" href="manifest.json?v=4">
   <link rel="icon" type="image/png" href="https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
   <div id="app">
-    <div class="splash"><img src="https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png" alt="Logo Latihan CPNS" style="width:80px;height:80px;border-radius:18px;object-fit:contain;box-shadow:0 8px 24px rgba(107,91,196,.25)"><div class="spin"></div><p>Memuat aplikasi…</p></div>
+    <div class="splash"><img src="https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png" alt="Logo Latihan CPNS" style="width:80px;height:80px;border-radius:18px;object-fit:contain;box-shadow:0 8px 24px rgba(46,184,126,.25)"><div class="spin"></div><p>Memuat aplikasi…</p></div>
   </div>
   <div id="modalRoot"></div>
   <div id="loader" class="loader" hidden><div class="spin"></div><p id="loaderTxt">Memuat…</p></div>
   <div id="toasts" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="js/config.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

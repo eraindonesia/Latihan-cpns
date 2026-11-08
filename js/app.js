@@ -117,7 +117,7 @@ document.addEventListener('submit', e => { const f = e.target.closest('form[data
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.mback') && !S.modalPersist) closeModal(); });
 
 /* ---------- Grafik ---------- */
-function chartTheme() { const d = document.documentElement.dataset.theme === 'dark'; return { tx: d ? '#cfcbf0' : '#7c789c', grid: d ? 'rgba(255,255,255,.08)' : 'rgba(107,91,196,.12)' }; }
+function chartTheme() { const d = document.documentElement.dataset.theme === 'dark'; return { tx: d ? '#b7d1c6' : '#688077', grid: d ? 'rgba(255,255,255,.08)' : 'rgba(46,184,126,.12)' }; }
 function chartBox(id, h) { return '<div class="chartbox" style="height:' + (h || 260) + 'px"><canvas id="' + id + '" role="img" aria-label="Grafik"></canvas></div>'; }
 function mkChart(id, cfg) {
   const c = document.getElementById(id); if (!c || !window.Chart) return;
@@ -128,7 +128,7 @@ function mkChart(id, cfg) {
   S.charts[id] = new Chart(c, cfg);
 }
 function destroyCharts() { Object.keys(S.charts).forEach(k => { try { S.charts[k].destroy(); } catch (e) { /* abaikan */ } }); S.charts = {}; }
-const CK = { TWK: '#f59e4b', TIU: '#1fc5c0', TKP: '#ec6fa3' };
+const CK = { TWK: '#f59e0b', TIU: '#3b82f6', TKP: '#ec4899' };
 
 /* ---------- Helper tampilan ---------- */
 const KAT = { TWK: 'Tes Wawasan Kebangsaan', TIU: 'Tes Inteligensia Umum', TKP: 'Tes Karakteristik Pribadi' };
@@ -171,7 +171,7 @@ function applyTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
   lsSet('cpns_theme', t);
   const mt = document.getElementById('metaTheme');
-  if (mt) mt.setAttribute('content', t === 'dark' ? '#211d3d' : '#6b5bc4');
+  if (mt) mt.setAttribute('content', t === 'dark' ? '#162821' : '#2eb87e');
 }
 ACT.theme = () => { applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); if (S.user && !S.exam) go(S.page, S.params); };
 
@@ -340,7 +340,7 @@ VIEWS.beranda = () => swr('home', 'home', {}, (d, cached) => {
     (last ? '<div class="muted sm mb">' + esc(last.paket) + ' · Total <b>' + last.total + '</b> ' + lulusChip(last.lulus) + '</div>' + last.kategori.map(k => '<div class="catrow"><div class="top">' + katChip(k.id) + '<b>' + k.skor + '</b><span class="muted sm">/ ' + k.max + ' · PG ' + k.pg + '</span><span class="sp"></span>' + (k.lulus ? stChip('Lulus') : stChip('Tidak Lulus')) + '</div>' + bar(k.max ? k.skor / k.max * 100 : 0, CK[k.id], k.max ? k.pg / k.max * 100 : null) + '</div>').join('') : empty('bi-clipboard-data', 'Belum ada hasil', 'Hasil sesi terakhir tampil di sini.')) + '</div></div>' +
     '<div class="g2"><div class="card pad"><h4 class="mb">Tryout Mendatang</h4>' + (d.mendatang.length ? d.mendatang.map(p => '<div class="row mb"><div class="sp"><b>' + esc(p.nama) + '</b><div class="muted sm">' + (p.tgl_mulai ? fmtDT(p.tgl_mulai) : 'Kapan saja') + ' · ' + p.durasi + ' menit · ' + p.jumlah + ' soal</div></div><button class="btn sm ghost" data-act="nav" data-arg="paket">Buka</button></div>').join('') : empty('bi-calendar-event', 'Belum ada tryout terjadwal', '')) + '</div>' +
     '<div class="card pad"><div class="row mb"><h4 class="sp">Riwayat Terbaru</h4><button class="linkb sm" data-act="nav" data-arg="riwayat">Semua</button></div>' + (d.riwayat.length ? d.riwayat.map(r => '<div class="row mb"><div class="sp"><b>' + esc(r.paket) + '</b><div class="muted sm">' + fmtDT(r.waktu) + '</div></div><b>' + r.skor + '</b>' + lulusChip(r.lulus) + '<button class="icon-btn" data-act="lihat" data-arg="' + r.id + '" aria-label="Lihat hasil"><i class="bi bi-chevron-right"></i></button></div>').join('') : empty('bi-clock-history', 'Belum ada riwayat', '')) + '</div></div>';
-  if (d.seri.length) mkChart('chProg', { type: 'line', data: { labels: d.seri.map(x => fmtShort(x.t)), datasets: [{ label: 'Skor', data: d.seri.map(x => x.skor), borderColor: '#6b5bc4', backgroundColor: 'rgba(107,91,196,.12)', fill: true, tension: .35, pointRadius: 4 }, { label: 'Passing grade', data: d.seri.map(() => d.pg_total), borderColor: '#f0625c', borderDash: [6, 4], pointRadius: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
+  if (d.seri.length) mkChart('chProg', { type: 'line', data: { labels: d.seri.map(x => fmtShort(x.t)), datasets: [{ label: 'Skor', data: d.seri.map(x => x.skor), borderColor: '#2eb87e', backgroundColor: 'rgba(46,184,126,.15)', fill: true, tension: .35, pointRadius: 4 }, { label: 'Passing grade', data: d.seri.map(() => d.pg_total), borderColor: '#f0625c', borderDash: [6, 4], pointRadius: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
 });
 
 /* ============================================================
@@ -788,7 +788,7 @@ VIEWS.adminDash = () => swr('adash', 'adminDash', {}, d => {
     '<div class="card pad"><div class="row mb"><h4 class="sp">Sesi Terbaru</h4><button class="linkb sm" data-act="nav" data-arg="laporan">Laporan</button></div>' +
     (d.sesiBaru.length ? d.sesiBaru.map(x => '<div class="row mb"><div class="sp"><b>' + esc(x.nama) + '</b><div class="muted sm">' + esc(x.paket) + ' · ' + fmtDT(x.waktu) + '</div></div><b>' + x.skor + '</b>' + lulusChip(x.lulus) + '<button class="icon-btn" data-act="lihat" data-arg="' + x.id + '" aria-label="Lihat hasil"><i class="bi bi-chevron-right"></i></button></div>').join('') : empty('bi-clipboard-data', 'Belum ada sesi', '')) +
     '<div class="muted sm mt"><i class="bi bi-envelope"></i> Sisa kuota email harian: <b>' + nf(d.emailKuota) + '</b></div></div></div>';
-  mkChart('chAct', { type: 'bar', data: { labels: d.hari, datasets: [{ label: 'Latihan', data: d.latihan, backgroundColor: '#6b5bc4', borderRadius: 6 }, { label: 'Tryout', data: d.simulasi, backgroundColor: '#1fc5c0', borderRadius: 6 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+  mkChart('chAct', { type: 'bar', data: { labels: d.hari, datasets: [{ label: 'Latihan', data: d.latihan, backgroundColor: '#2eb87e', borderRadius: 6 }, { label: 'Tryout', data: d.simulasi, backgroundColor: '#3b82f6', borderRadius: 6 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
 });
 ACT.selClear = () => { const m = { peserta: selPs, soal: selSl }; const o = m[S.page]; if (o) { Object.keys(o).forEach(k => delete o[k]); S.page === 'peserta' ? drawPeserta() : drawSoal(); } };
 
@@ -1132,8 +1132,8 @@ function lpRingkas() {
       '<div class="g4 keep2 mb">' + kpi('Sesi Selesai', nf(d.total), d.aktifBerlatih + ' peserta aktif', 'bi-journal-check') + kpi('Rata-rata Skor', nf(d.rata), 'Simpangan baku ' + d.sd, 'bi-graph-up', 'tiu') + kpi('Tingkat Kelulusan', d.lulusPct + '%', d.lulus + ' lulus · ' + d.tidakLulus + ' tidak', 'bi-patch-check', 'twk') + kpi('Rentang Skor', nf(d.terendah) + '–' + nf(d.tertinggi), 'Rata-rata harian', 'bi-arrows-expand', 'tkp') + '</div>' +
       '<div class="g-main mb"><div class="card pad"><h4>Tren Rata-rata Skor Harian</h4>' + chartBox('chLap1', 260) + '</div><div class="card pad"><h4 class="mb">Rata-rata per Kategori</h4>' + ['TWK', 'TIU', 'TKP'].map(k => { const x = d.kategori[k]; return '<div class="catrow"><div class="top">' + katChip(k) + '<b>' + x.rata + '</b><span class="muted sm">/ ' + x.max + ' · PG ' + x.pg + ' · gagal ' + d.gagal[k] + 'x</span></div>' + bar(x.max ? x.rata / x.max * 100 : 0, CK[k], x.max ? x.pg / x.max * 100 : null) + '</div>'; }).join('') + '</div></div>' +
       '<div class="g2"><div class="card pad"><h4>Volume Sesi Harian</h4>' + chartBox('chLap2', 240) + '</div><div class="card pad"><h4>Kelulusan</h4>' + chartBox('chLap3', 240) + '</div></div>';
-    mkChart('chLap1', { type: 'line', data: { labels: d.hari, datasets: [{ label: 'Rata-rata skor', data: d.seri, borderColor: '#6b5bc4', backgroundColor: 'rgba(107,91,196,.12)', fill: true, tension: .3, spanGaps: true, pointRadius: 3 }, { label: 'Passing grade', data: d.hari.map(() => d.pgTotal), borderColor: '#f0625c', borderDash: [6, 4], pointRadius: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
-    mkChart('chLap2', { type: 'bar', data: { labels: d.hari, datasets: [{ label: 'Latihan', data: d.latihan, backgroundColor: '#6b5bc4', borderRadius: 5 }, { label: 'Tryout', data: d.simulasi, backgroundColor: '#1fc5c0', borderRadius: 5 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+    mkChart('chLap1', { type: 'line', data: { labels: d.hari, datasets: [{ label: 'Rata-rata skor', data: d.seri, borderColor: '#2eb87e', backgroundColor: 'rgba(46,184,126,.15)', fill: true, tension: .3, spanGaps: true, pointRadius: 3 }, { label: 'Passing grade', data: d.hari.map(() => d.pgTotal), borderColor: '#f0625c', borderDash: [6, 4], pointRadius: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
+    mkChart('chLap2', { type: 'bar', data: { labels: d.hari, datasets: [{ label: 'Latihan', data: d.latihan, backgroundColor: '#2eb87e', borderRadius: 5 }, { label: 'Tryout', data: d.simulasi, backgroundColor: '#3b82f6', borderRadius: 5 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
     mkChart('chLap3', { type: 'doughnut', data: { labels: ['Lulus', 'Tidak Lulus'], datasets: [{ data: [d.lulus, d.tidakLulus], backgroundColor: ['#4cc26b', '#f0625c'], borderWidth: 0 }] }, options: { cutout: '65%', plugins: { legend: { position: 'bottom' } } } });
   });
 }
@@ -1223,7 +1223,7 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=3').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=4').then(reg => {
       reg.update();
     }).catch(() => {});
   });

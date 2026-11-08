@@ -255,20 +255,11 @@ function mountAuth(mode, extra) {
     '<div class="order-cta-text"><i class="bi bi-cart-check-fill"></i><div><b>Belum punya akses akun?</b><span>Bagi yang mau silakan order di sini: <a href="http://lynk.id/mardibda/g4m6rg46kowj" target="_blank" rel="noopener noreferrer">http://lynk.id/mardibda/g4m6rg46kowj</a></span></div></div>' +
     '<a class="btn primary sm order-cta-btn" href="http://lynk.id/mardibda/g4m6rg46kowj" target="_blank" rel="noopener noreferrer"><i class="bi bi-bag-check"></i> Order di Sini</a>' +
     '</div>';
-  if (mode === 'login') {
+  if (mode === 'login' || mode === 'register') {
     authShell('<h2>Masuk ke Akun</h2><p class="sub">Masuk untuk berlatih soal CPNS (TWK, TIU, TKP).</p>' + ann +
       '<form data-sub="login" novalidate><div class="ferr" role="alert"></div>' + fld('Email', 'email', { type: 'email', icon: 'bi-envelope', ph: 'nama@email.com', ac: 'username' }) + fld('Password', 'password', { type: 'password', icon: 'bi-lock', ph: 'Password Anda', ac: 'current-password' }) +
       '<div class="r mb sm"><button type="button" class="linkb" data-act="authGo" data-arg="forgot">Lupa password?</button></div><button class="btn primary block" type="submit">Masuk <i class="bi bi-arrow-right"></i></button></form>' +
-      orderCta +
-      (S.cfg.registrasi_dibuka === 'Ya' ? '<p class="c sm mt">Belum punya akun? <button class="linkb" data-act="authGo" data-arg="register">Ajukan pendaftaran</button></p>' : '<p class="c sm mt muted">Pendaftaran sedang ditutup.</p>'));
-  } else if (mode === 'register') {
-    authShell('<h2>Ajukan Pendaftaran</h2><p class="sub">Akun aktif setelah disetujui admin; notifikasi dikirim ke email Anda.</p>' + orderCta + '<form data-sub="register" novalidate><div class="ferr" role="alert"></div>' +
-      fld('Nama Lengkap', 'nama', { icon: 'bi-person-vcard', ph: 'Contoh: Ahmad Rizky Pratama', ac: 'name' }) + fld('Email Aktif', 'email', { type: 'email', icon: 'bi-envelope', ph: 'ahmad@email.com', ac: 'email', hint: 'Untuk notifikasi persetujuan & hasil latihan' }) +
-      fld('Instansi & Formasi Target <span class="muted">(opsional)</span>', 'instansi', { icon: 'bi-building', ph: 'Contoh: Kemenkeu — Analis Kebijakan', req: false }) +
-      '<div class="grid2">' + fld('Password', 'password', { type: 'password', icon: 'bi-lock', ac: 'new-password', attr: 'minlength="8" data-inp="pwStrength"' }) + fld('Konfirmasi Password', 'password2', { type: 'password', icon: 'bi-lock-fill', ac: 'new-password' }) + '</div>' +
-      '<div class="meter" id="meter"><i></i><i></i><i></i></div><div class="hint" id="meterTxt" style="margin-top:-8px;margin-bottom:12px">Minimal 8 karakter, kombinasi huruf dan angka.</div>' +
-      '<label class="chk"><input type="checkbox" name="setuju" required><span>Saya setuju dengan ketentuan penggunaan dan kebijakan privasi aplikasi latihan CPNS.</span></label><button class="btn primary block mt-s" type="submit">Kirim Pendaftaran <i class="bi bi-arrow-right"></i></button></form>' +
-      '<p class="c sm mt">Sudah punya akun? <button class="linkb" data-act="authGo" data-arg="login">Masuk</button></p>');
+      orderCta);
   } else if (mode === 'done') {
     authShell('<div class="ok-box"><i class="bi bi-check-circle-fill"></i><h2 class="mt-s">Pendaftaran Terkirim</h2><p class="muted mt-s">' + esc(extra) + '</p><button class="btn primary mt" data-act="authGo" data-arg="login">Kembali ke Halaman Masuk</button></div>');
   } else if (mode === 'forgot') {
@@ -1648,7 +1639,7 @@ ACT.emailLog = async () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=10').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=11').then(reg => {
       reg.update();
     }).catch(() => {});
   });

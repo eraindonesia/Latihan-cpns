@@ -1,13 +1,3 @@
-const CACHE_NAME = 'cpns-cat-pwa-v10';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json?v=10',
-  './css/style.css?v=10',
-  './js/config.js?v=10',
-  './js/app.js?v=10'
-];
-
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(

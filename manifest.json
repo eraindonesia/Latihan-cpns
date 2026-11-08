@@ -22,22 +22,28 @@
   ],
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "https://res.cloudinary.com/twobznku/image/upload/w_192,h_192,c_scale,f_png/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "https://res.cloudinary.com/twobznku/image/upload/w_512,h_512,c_scale,f_png/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512-maskable.png",
+      "src": "https://res.cloudinary.com/twobznku/image/upload/w_512,h_512,c_scale,f_png/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

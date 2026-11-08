@@ -1,16 +1,11 @@
-const CACHE_NAME = 'cpns-cat-pwa-v2';
+const CACHE_NAME = 'cpns-cat-pwa-v3';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  './css/style.css',
-  './js/config.js',
-  './js/app.js',
-  './icons/favicon.png',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-512-maskable.png',
-  './icons/apple-touch-icon.png'
+  './manifest.json?v=3',
+  './css/style.css?v=3',
+  './js/config.js?v=3',
+  './js/app.js?v=3'
 ];
 
 self.addEventListener('install', event => {

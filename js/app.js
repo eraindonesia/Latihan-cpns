@@ -180,7 +180,7 @@ ACT.theme = () => { applyTheme(document.documentElement.dataset.theme === 'dark'
    ============================================================ */
 function authShell(inner) {
   const showBtn = !isStandalone() && !!deferredPwaPrompt;
-  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><img src="icons/icon-192.png" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>Portal Simulasi CAT & Evaluasi Kompetensi</small></div></div><div class="row gap-s"><button class="btn sm primary pwa-install-btn ' + (showBtn ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-download"></i> Instal Aplikasi</button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div></div><div class="auth-card card">' + inner + '</div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + ' · Akses terbatas untuk peserta yang disetujui admin</div></div>';
+  $('#app').innerHTML = '<div class="auth"><div class="auth-top"><div class="brand"><span class="brand-i"><img src="' + esc((window.APP_CONFIG && window.APP_CONFIG.LOGO_URL) || 'https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png') + '" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>Portal Simulasi CAT & Evaluasi Kompetensi</small></div></div><div class="row gap-s"><button class="btn sm primary pwa-install-btn ' + (showBtn ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-download"></i> Instal Aplikasi</button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button></div></div><div class="auth-card card">' + inner + '</div><div class="auth-foot">© ' + new Date().getFullYear() + ' ' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + ' · Akses terbatas untuk peserta yang disetujui admin</div></div>';
 }
 function fld(label, name, o) {
   o = o || {};
@@ -283,7 +283,7 @@ function mountShell() {
   const bnav = isAdmin()
     ? BNAV_A.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '"><i class="bi ' + m[2] + '"></i><span>' + m[1] + '</span>' + (m[0] === 'peserta' ? '<b class="bnav-bdg hide" id="bdgPesertaMob"></b>' : '') + '</button>').join('') + '<button data-act="drawer" aria-label="Menu lainnya"><i class="bi bi-grid-3x3-gap"></i><span>Lainnya</span></button>'
     : BNAV_P.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '"><i class="bi ' + m[2] + '"></i><span>' + m[1] + '</span></button>').join('');
-  $('#app').innerHTML = '<aside class="side" id="side"><div class="brand"><span class="brand-i"><img src="icons/icon-192.png" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>' + (isAdmin() ? 'Panel Admin' : 'Simulasi CAT') + '</small></div></div><nav class="nav" aria-label="Menu utama">' +
+  $('#app').innerHTML = '<aside class="side" id="side"><div class="brand"><span class="brand-i"><img src="' + esc((window.APP_CONFIG && window.APP_CONFIG.LOGO_URL) || 'https://res.cloudinary.com/twobznku/image/upload/f_auto/q_auto/Menjaga_Tradisi_Menghasilkan_Kualitas_1_hurgyx.png') + '" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><div><b>' + esc(S.cfg.nama_aplikasi || 'Latihan CPNS') + '</b><small>' + (isAdmin() ? 'Panel Admin' : 'Simulasi CAT') + '</small></div></div><nav class="nav" aria-label="Menu utama">' +
     menu.map(m => '<button data-act="nav" data-arg="' + m[0] + '" data-p="' + m[0] + '" title="' + m[1] + '"><i class="bi ' + m[2] + '"></i><span class="lbl">' + m[1] + '</span>' + (m[0] === 'peserta' ? '<span class="badge hide" id="bdgPeserta"></span>' : '') + '</button>').join('') +
     '</nav><div class="side-user">' + avatar(S.user.nama) + '<div><b>' + esc(S.user.nama) + '</b><small>' + (isAdmin() ? 'Superadmin' : 'Peserta Aktif') + '</small></div><button class="icon-btn" data-act="logout" aria-label="Keluar" title="Keluar"><i class="bi bi-box-arrow-right"></i></button></div></aside><div class="scrim" id="scrim" data-act="drawer"></div>' +
     '<div class="main"><header class="top"><button class="icon-btn menu" data-act="drawer" aria-label="Menu"><i class="bi bi-list" style="font-size:22px"></i></button><h4 id="ttl">Beranda</h4><button class="btn sm ghost pwa-install-btn ' + (!isStandalone() && deferredPwaPrompt ? '' : 'hide') + '" data-act="pwaInstall"><i class="bi bi-phone"></i><span class="pwa-lbl"> Instal</span></button><button class="icon-btn" data-act="theme" aria-label="Ganti tema"><i class="bi bi-moon-stars"></i></button><button class="icon-btn top-prof" data-act="nav" data-arg="profil" aria-label="Profil" title="Profil">' + avatar(S.user.nama) + '</button></header><main class="view" id="view"></main><nav class="bnav" id="bnav" aria-label="Navigasi bawah">' + bnav + '</nav></div>';
@@ -1223,7 +1223,13 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=3').then(reg => {
+      reg.update();
+    }).catch(() => {});
+  });
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing && !S.exam) { refreshing = true; window.location.reload(); }
   });
 }
 

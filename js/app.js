@@ -614,7 +614,7 @@ function drawReview() {
           return '<div class="opt static ' + cls + '"><span class="ol">' + L + '</span><span class="ot">' + esc(q.o[L]) + '</span>' + (tkp && q.skors ? '<span class="tag muted">' + q.skors[LET.indexOf(L)] + ' poin</span>' : '') + tag + '</div>';
         }).join('') + '</div>' +
         '<div class="disc"><b><i class="bi bi-lightbulb"></i> Pembahasan</b>' + (q.pembahasan ? esc(q.pembahasan) : '<span class="muted">Belum ada pembahasan.</span>') + '</div>' +
-        (q.materi && q.materi.judul ? '<div class="mt-s"><button class="btn sm ghost" data-act="nav" data-arg="materi"><i class="bi bi-book"></i> Pelajari: ' + esc(q.materi.judul) + '</button></div>' : '') + '</div>';
+        (q.materi && q.materi.judul ? '<div class="mt-s"><button class="btn sm ghost" data-act="bukaMateriDariHasil" data-arg="' + esc(q.materi.id) + '"><i class="bi bi-book-half"></i> Baca E-Book: ' + esc(q.materi.judul) + '</button></div>' : '') + '</div>';
     }).join('') : '<div class="card">' + empty('bi-funnel', 'Tidak ada soal pada filter ini', '') + '</div>');
 }
 ACT.hfTab = t => { S.st.hf = t; drawReview(); };
@@ -656,7 +656,7 @@ VIEWS.peringkat = () => swr('rank_' + S.st.rk, 'peringkat', { paketId: S.st.rk }
 CHG.rkPaket = v => { S.st.rk = v; go('peringkat'); };
 
 /* ============================================================
-   MATERI BELAJAR + PEMBACA PDF
+   MATERI BELAJAR + PEMBACA E-BOOK INTERAKTIF (TANPA UNDUH)
    ============================================================ */
 S.st.mk = 'Semua'; S.st.mq = '';
 VIEWS.materi = () => swr('materi', 'materiList', {}, d => {
@@ -666,21 +666,22 @@ VIEWS.materi = () => swr('materi', 'materiList', {}, d => {
 function drawMateri(full) {
   const d = S.materiData || [];
   if (full) {
-    $('#view').innerHTML = pageHead('Materi', 'Materi Belajar', 'Ringkasan materi dalam format PDF — baca langsung atau unduh.') +
+    $('#view').innerHTML = pageHead('Materi', 'Perpustakaan E-Book', 'Pilih modul belajar interaktif — dilengkapi mode baca nyaman dan penanda halaman otomatis.') +
       '<div class="toolbar mb"><div class="sr"><i class="bi bi-search"></i><input class="inp" placeholder="Cari judul atau bab…" data-inp="mq" value="' + esc(S.st.mq) + '" aria-label="Cari materi"></div><div class="tabs">' + ['Semua', 'TWK', 'TIU', 'TKP'].map(t => '<button class="tab ' + (S.st.mk === t ? 'on' : '') + '" data-act="mkTab" data-arg="' + t + '">' + t + '</button>').join('') + '</div></div><div id="materiList"></div>';
   }
   const q = S.st.mq.toLowerCase();
   const list = d.filter(m => (S.st.mk === 'Semua' || m.kategori === S.st.mk) && (!q || (m.judul + ' ' + m.bab).toLowerCase().indexOf(q) >= 0));
   const box = $('#materiList'); if (!box) return;
-  box.innerHTML = list.length ? '<div class="pkgrid">' + list.map(m => '<div class="card pk"><div class="row">' + katChip(m.kategori) + '<span class="sp"></span><span class="muted sm">' + nf(m.kb) + ' KB</span></div><h4>' + esc(m.judul) + '</h4><div class="muted sm">' + esc(m.bab || '') + '</div><p>' + esc(m.deskripsi || '') + '</p><div class="foot"><span class="muted sm">' + fmtD(m.tgl) + '</span><span class="sp"></span><button class="btn sm ghost" data-act="materiDl" data-arg="' + m.id + '"><i class="bi bi-download"></i></button><button class="btn sm primary" data-act="materiBaca" data-arg="' + m.id + '"><i class="bi bi-book"></i> Baca</button></div></div>').join('') + '</div>' : '<div class="card">' + empty('bi-book', 'Materi tidak ditemukan', 'Coba kata kunci atau kategori lain.') + '</div>';
+  box.innerHTML = list.length ? '<div class="pkgrid">' + list.map(m => {
+    const lastPg = +(lsGet('ebk_pg_' + m.id) || 0);
+    return '<div class="card pk ebk-card"><div class="ebk-cover k-' + String(m.kategori).toLowerCase() + '"><div class="ebk-spine"></div><div class="ebk-cov-in">' + katChip(m.kategori) + '<i class="bi bi-journal-bookmark-fill ebk-cov-ico"></i><small>' + (lastPg > 1 ? 'Hal. terakhir: ' + lastPg : 'E-Book Modul') + '</small></div></div>' +
+      '<h4>' + esc(m.judul) + '</h4>' + (m.bab ? '<div class="ebk-bab"><i class="bi bi-bookmark-star"></i> ' + esc(m.bab) + '</div>' : '') + '<p>' + esc(m.deskripsi || 'Modul ringkasan materi SKD siap baca.') + '</p>' +
+      '<div class="foot"><span class="muted sm"><i class="bi bi-calendar3"></i> ' + fmtD(m.tgl) + '</span><span class="sp"></span><button class="btn sm primary" data-act="materiBaca" data-arg="' + m.id + '"><i class="bi bi-book-half"></i> ' + (lastPg > 1 ? 'Lanjut Baca' : 'Baca E-Book') + '</button></div></div>';
+  }).join('') + '</div>' : '<div class="card">' + empty('bi-book', 'Materi tidak ditemukan', 'Coba kata kunci atau kategori lain.') + '</div>';
 }
 INP.mq = debounce(v => { S.st.mq = v; drawMateri(false); }, 200);
 ACT.mkTab = t => { S.st.mk = t; drawMateri(true); const i = $('[data-inp=mq]'); if (i) i.value = S.st.mq; };
-ACT.materiDl = async (id, el) => {
-  setBusy(el, true, '');
-  try { const r = await call('materiFile', { id }); dlBase64(r.nama, r.base64, 'application/pdf'); } catch (e) { toast(e.message, 'bad'); }
-  setBusy(el, false);
-};
+
 let pdfLib = null;
 function loadPdfJs() {
   if (pdfLib) return pdfLib;
@@ -691,35 +692,239 @@ function loadPdfJs() {
       try { const t = await (await fetch(base + 'pdf.worker.min.js')).text(); window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([t], { type: 'text/javascript' })); res(window.pdfjsLib); }
       catch (e) { rej(e); }
     };
-    s.onerror = () => rej(new Error('Pustaka PDF gagal dimuat.'));
+    s.onerror = () => rej(new Error('Pustaka E-Book gagal dimuat.'));
     document.head.appendChild(s);
   }).catch(e => { pdfLib = null; throw e; }));
 }
+
 S.pdfTok = 0;
+S.ebk = null;
+
+function closeEbook() {
+  S.pdfTok++;
+  if (S.ebk && S.ebk.keyHandler) document.removeEventListener('keydown', S.ebk.keyHandler);
+  S.ebk = null;
+  S.modalPersist = false;
+  closeModal();
+  if (S.page === 'materi') drawMateri(false);
+}
+ACT.ebkClose = () => closeEbook();
+
 ACT.materiBaca = async id => {
   const m = (S.materiData || []).find(x => x.id === id), tok = ++S.pdfTok;
-  openModal({ title: m ? m.judul : 'Materi', size: 'xl', body: '<div class="pdfv" id="pdfv"><div class="empty"><div class="spin" style="margin:auto"></div><span class="mt-s">Memuat dokumen…</span></div></div>', foot: '<span class="muted sm sp" id="pdfInfo"></span><button class="btn ghost" data-act="pdfSave"><i class="bi bi-download"></i> Unduh</button><button class="btn primary" data-act="closeModal">Tutup</button>', onClose: () => { S.pdfTok++; S.pdfData = null; } });
+  const savedTone = lsGet('ebk_tone') || 'sepia';
+  const savedMode = lsGet('ebk_mode') || 'flip';
+  const savedPage = Math.max(1, +(lsGet('ebk_pg_' + id) || 1));
+
+  openModal({
+    title: m ? m.judul : 'E-Book Materi',
+    size: 'ebook',
+    persist: true,
+    body: '<div class="ebk-wrap" id="ebkWrap" data-tone="' + esc(savedTone) + '" oncontextmenu="return false">' +
+      '<div class="ebk-bar">' +
+        '<div class="ebk-bar-grp">' +
+          '<button type="button" class="ebk-tbtn ' + (savedMode === 'flip' ? 'on' : '') + '" data-act="ebkMode" data-arg="flip" title="Mode Lembar Buku"><i class="bi bi-book"></i><span>Buku</span></button>' +
+          '<button type="button" class="ebk-tbtn ' + (savedMode === 'scroll' ? 'on' : '') + '" data-act="ebkMode" data-arg="scroll" title="Mode Gulir Vertikal"><i class="bi bi-View-stacked bi-distribute-vertical"></i><span>Gulir</span></button>' +
+        '</div>' +
+        '<div class="ebk-bar-grp ebk-tones" role="group" aria-label="Tema kertas baca">' +
+          '<button type="button" class="ebk-tone t-light ' + (savedTone === 'light' ? 'on' : '') + '" data-act="ebkTone" data-arg="light" title="Kertas Putih">A</button>' +
+          '<button type="button" class="ebk-tone t-sepia ' + (savedTone === 'sepia' ? 'on' : '') + '" data-act="ebkTone" data-arg="sepia" title="Kertas Klasik (Sepia)">A</button>' +
+          '<button type="button" class="ebk-tone t-night ' + (savedTone === 'night' ? 'on' : '') + '" data-act="ebkTone" data-arg="night" title="Mode Malam">A</button>' +
+        '</div>' +
+        '<div class="ebk-bar-grp">' +
+          '<button type="button" class="ebk-tbtn" data-act="ebkZoom" data-arg="-0.2" aria-label="Perkecil"><i class="bi bi-zoom-out"></i></button>' +
+          '<span class="ebk-zval" id="ebkZoomVal">100%</span>' +
+          '<button type="button" class="ebk-tbtn" data-act="ebkZoom" data-arg="0.2" aria-label="Perbesar"><i class="bi bi-zoom-in"></i></button>' +
+          '<button type="button" class="ebk-tbtn" data-act="ebkFull" title="Layar Penuh"><i class="bi bi-arrows-fullscreen"></i></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ebk-stage" id="ebkStage">' +
+        '<div class="empty"><div class="spin" style="margin:auto"></div><span class="mt-s">Membuka halaman e-book…</span></div>' +
+      '</div>' +
+      '<div class="ebk-foot" id="ebkFoot" hidden>' +
+        '<button type="button" class="btn sm ghost" id="ebkPrev" data-act="ebkNav" data-arg="-1"><i class="bi bi-chevron-left"></i> <span class="hmob"> Sebelumnya</span></button>' +
+        '<div class="ebk-prog">' +
+          '<div class="ebk-pginfo">Halaman <b id="ebkCur">1</b> dari <b id="ebkTot">1</b></div>' +
+          '<input type="range" class="ebk-slider" id="ebkSlider" min="1" max="1" value="1" data-inp="ebkSlide" aria-label="Navigasi halaman">' +
+        '</div>' +
+        '<button type="button" class="btn sm primary" id="ebkNext" data-act="ebkNav" data-arg="1"><span class="hmob">Berikutnya </span> <i class="bi bi-chevron-right"></i></button>' +
+      '</div>' +
+    '</div>',
+    onClose: () => {
+      S.pdfTok++;
+      if (S.ebk && S.ebk.keyHandler) document.removeEventListener('keydown', S.ebk.keyHandler);
+      S.ebk = null;
+    }
+  });
+
+  // Ubah tombol close modal agar memanggil closeEbook
+  const closeBtn = $('.modal .mhead [data-act=closeModal]');
+  if (closeBtn) closeBtn.dataset.act = 'ebkClose';
+
   try {
     const r = await call('materiFile', { id }, { retry: 1 }); if (tok !== S.pdfTok) return;
-    S.pdfData = r;
     const bin = atob(r.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     const lib = await loadPdfJs(); if (tok !== S.pdfTok) return;
-    const doc = await lib.getDocument({ data: u8 }).promise, host = $('#pdfv'); if (!host || tok !== S.pdfTok) return;
-    host.innerHTML = ''; $('#pdfInfo').textContent = doc.numPages + ' halaman';
-    const w = Math.max(320, host.clientWidth - 28), dpr = Math.min(window.devicePixelRatio || 1, 2);
-    for (let n = 1; n <= doc.numPages; n++) {
-      if (tok !== S.pdfTok) return;
-      const pg = await doc.getPage(n), vp0 = pg.getViewport({ scale: 1 }), sc = w / vp0.width, vp = pg.getViewport({ scale: sc * dpr });
-      const cv = document.createElement('canvas'); cv.className = 'pdfpg'; cv.width = vp.width; cv.height = vp.height; cv.style.width = Math.round(vp.width / dpr) + 'px';
-      cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Halaman ' + n); host.appendChild(cv);
-      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-    }
+    const doc = await lib.getDocument({ data: u8 }).promise; if (tok !== S.pdfTok) return;
+
+    const startPg = Math.min(doc.numPages, Math.max(1, savedPage));
+    const keyHandler = ev => {
+      if (!S.ebk || S.ebk.mode !== 'flip') return;
+      if (ev.key === 'ArrowRight' || ev.key === 'PageDown') { ev.preventDefault(); ebkGo(S.ebk.page + 1, 'next'); }
+      else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { ev.preventDefault(); ebkGo(S.ebk.page - 1, 'prev'); }
+      else if (ev.key === 'Escape') closeEbook();
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    S.ebk = { id, doc, total: doc.numPages, page: startPg, zoom: 1, mode: savedMode, tone: savedTone, tok, keyHandler, rendering: false };
+    const foot = $('#ebkFoot'), sl = $('#ebkSlider'), tot = $('#ebkTot');
+    if (foot) foot.hidden = false;
+    if (tot) tot.textContent = doc.numPages;
+    if (sl) { sl.max = doc.numPages; sl.value = startPg; }
+
+    initEbkSwipe();
+    await renderEbookView('none');
   } catch (e) {
     if (tok !== S.pdfTok) return;
-    const h = $('#pdfv'); if (h) h.innerHTML = '<div class="empty"><i class="bi bi-exclamation-triangle"></i><b>Tidak dapat menampilkan dokumen</b><span>' + esc(e.message) + '</span>' + (S.pdfData ? '<button class="btn primary mt" data-act="pdfSave">Unduh PDF</button>' : '') + '</div>';
+    const st = $('#ebkStage');
+    if (st) st.innerHTML = '<div class="empty"><i class="bi bi-exclamation-triangle"></i><b>Tidak dapat membuka e-book</b><span>' + esc(e.message) + '</span><button class="btn ghost mt" data-act="materiBaca" data-arg="' + esc(id) + '"><i class="bi bi-arrow-repeat"></i> Coba Lagi</button></div>';
   }
 };
-ACT.pdfSave = () => { if (S.pdfData) dlBase64(S.pdfData.nama, S.pdfData.base64, 'application/pdf'); else toast('Dokumen belum siap.', 'info'); };
+
+function initEbkSwipe() {
+  const st = $('#ebkStage'); if (!st) return;
+  let sx = 0, sy = 0;
+  st.addEventListener('touchstart', ev => {
+    if (ev.touches.length === 1 && S.ebk && S.ebk.mode === 'flip' && S.ebk.zoom <= 1.05) {
+      sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
+    }
+  }, { passive: true });
+  st.addEventListener('touchend', ev => {
+    if (!S.ebk || S.ebk.mode !== 'flip' || S.ebk.zoom > 1.05 || !sx || ev.changedTouches.length !== 1) return;
+    const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy;
+    sx = 0; sy = 0;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0 && S.ebk.page < S.ebk.total) ebkGo(S.ebk.page + 1, 'next');
+      else if (dx > 0 && S.ebk.page > 1) ebkGo(S.ebk.page - 1, 'prev');
+    }
+  }, { passive: true });
+}
+
+function updateEbkControls() {
+  const b = S.ebk; if (!b) return;
+  const cur = $('#ebkCur'), sl = $('#ebkSlider'), prev = $('#ebkPrev'), next = $('#ebkNext'), zv = $('#ebkZoomVal');
+  if (cur) cur.textContent = b.page;
+  if (sl) sl.value = b.page;
+  if (prev) prev.disabled = b.page <= 1;
+  if (next) next.disabled = b.page >= b.total;
+  if (zv) zv.textContent = Math.round(b.zoom * 100) + '%';
+  lsSet('ebk_pg_' + b.id, String(b.page));
+}
+
+async function renderEbookPageCanvas(pgNum, targetWidth) {
+  const b = S.ebk;
+  const pg = await b.doc.getPage(pgNum);
+  const vp0 = pg.getViewport({ scale: 1 });
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.2);
+  const sc = (targetWidth * b.zoom) / vp0.width;
+  const vp = pg.getViewport({ scale: sc * dpr });
+  const cv = document.createElement('canvas');
+  cv.className = 'ebk-cv';
+  cv.width = vp.width;
+  cv.height = vp.height;
+  cv.style.width = Math.round(vp.width / dpr) + 'px';
+  cv.style.height = Math.round(vp.height / dpr) + 'px';
+  cv.setAttribute('role', 'img');
+  cv.setAttribute('aria-label', 'Halaman E-Book ' + pgNum);
+  await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+  return cv;
+}
+
+async function renderEbookView(animDir) {
+  const b = S.ebk, st = $('#ebkStage');
+  if (!b || !st || b.tok !== S.pdfTok) return;
+  updateEbkControls();
+  const baseW = Math.min(780, Math.max(300, st.clientWidth - (window.innerWidth <= 768 ? 20 : 64)));
+
+  if (b.mode === 'flip') {
+    const tok = b.tok, p = b.page;
+    let sheet = $('.ebk-sheet', st);
+    if (!sheet) {
+      st.innerHTML = '<div class="ebk-book"><div class="ebk-sheet" id="ebkSheet"><div class="ebk-page-load"><div class="spin"></div></div></div></div>';
+      sheet = $('#ebkSheet');
+    } else if (animDir === 'next' || animDir === 'prev') {
+      sheet.classList.remove('flip-next', 'flip-prev');
+      void sheet.offsetWidth;
+      sheet.classList.add('flip-' + animDir);
+    }
+    const cv = await renderEbookPageCanvas(p, baseW);
+    if (!S.ebk || S.ebk.tok !== tok || S.ebk.page !== p || S.ebk.mode !== 'flip') return;
+    sheet.innerHTML = '<div class="ebk-crease"></div><div class="ebk-pghead"><span>' + esc((S.materiData.find(x => x.id === b.id) || {}).judul || 'Modul Belajar') + '</span><span>Hal. ' + p + ' / ' + b.total + '</span></div>';
+    sheet.appendChild(cv);
+    sheet.insertAdjacentHTML('beforeend', '<div class="ebk-pgfoot">— ' + p + ' —</div>');
+    st.scrollTop = 0;
+  } else {
+    // Mode gulir vertikal (semua halaman dalam bingkai halaman buku)
+    const tok = b.tok;
+    st.innerHTML = '<div class="ebk-scroll-list" id="ebkScrollList"></div>';
+    const list = $('#ebkScrollList');
+    for (let n = 1; n <= b.total; n++) {
+      if (!S.ebk || S.ebk.tok !== tok || S.ebk.mode !== 'scroll') return;
+      const wrap = document.createElement('div');
+      wrap.className = 'ebk-sheet ebk-scroll-item';
+      wrap.id = 'ebk_spg_' + n;
+      wrap.innerHTML = '<div class="ebk-crease"></div><div class="ebk-pghead"><span>Halaman ' + n + ' dari ' + b.total + '</span></div>';
+      list.appendChild(wrap);
+      const cv = await renderEbookPageCanvas(n, baseW);
+      if (!S.ebk || S.ebk.tok !== tok || S.ebk.mode !== 'scroll') return;
+      wrap.appendChild(cv);
+      wrap.insertAdjacentHTML('beforeend', '<div class="ebk-pgfoot">— ' + n + ' —</div>');
+      if (n === b.page && n > 1) wrap.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }
+  }
+}
+
+function ebkGo(n, dir) {
+  const b = S.ebk; if (!b) return;
+  const target = Math.max(1, Math.min(b.total, +n || 1));
+  if (target === b.page && dir !== 'force') return;
+  const d = dir || (target > b.page ? 'next' : 'prev');
+  b.page = target;
+  if (b.mode === 'scroll') {
+    updateEbkControls();
+    const el = document.getElementById('ebk_spg_' + target);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    renderEbookView(d);
+  }
+}
+ACT.ebkNav = delta => { if (S.ebk) ebkGo(S.ebk.page + (+delta)); };
+INP.ebkSlide = v => { if (S.ebk) ebkGo(+v); };
+ACT.ebkTone = tone => {
+  if (!S.ebk) return;
+  S.ebk.tone = tone; lsSet('ebk_tone', tone);
+  const w = $('#ebkWrap'); if (w) w.setAttribute('data-tone', tone);
+  $$('.ebk-tone').forEach(btn => btn.classList.toggle('on', btn.dataset.arg === tone));
+};
+ACT.ebkMode = mode => {
+  if (!S.ebk || S.ebk.mode === mode) return;
+  S.ebk.mode = mode; lsSet('ebk_mode', mode);
+  $$('[data-act=ebkMode]').forEach(btn => btn.classList.toggle('on', btn.dataset.arg === mode));
+  renderEbookView('force');
+};
+ACT.ebkZoom = delta => {
+  if (!S.ebk) return;
+  S.ebk.zoom = Math.round(Math.max(0.7, Math.min(2.0, S.ebk.zoom + (+delta))) * 100) / 100;
+  renderEbookView('force');
+};
+ACT.ebkFull = () => {
+  const m = $('.modal.ebook'); if (!m) return;
+  if (!document.fullscreenElement) {
+    if (m.requestFullscreen) m.requestFullscreen().catch(() => {});
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+};
 
 /* ============================================================
    PROFIL
@@ -1223,7 +1428,7 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=5').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=6').then(reg => {
       reg.update();
     }).catch(() => {});
   });
@@ -1268,4 +1473,11 @@ ACT.pwaInstall = async () => {
       foot: '<button class="btn primary" data-act="closeModal">Mengerti</button>'
     });
   }
+};
+
+ACT.bukaMateriDariHasil = async id => {
+  if (!S.materiData) {
+    try { S.materiData = await call('materiList', {}); } catch (e) { S.materiData = []; }
+  }
+  ACT.materiBaca(id);
 };

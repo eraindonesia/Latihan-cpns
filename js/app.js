@@ -60,14 +60,67 @@ async function call(action, payload, opt) {
     }
   }
 }
-/** Tampilkan data tersimpan lebih dulu (instan), lalu segarkan dari server. */
+/* ---------- State Memori (window.appState) & IndexedDB Media Cache ---------- */
+window.appState = window.appState || {};
+
+const idbMedia = (() => {
+  let dbP = null;
+  const open = () => {
+    if (dbP) return dbP;
+    return (dbP = new Promise(res => {
+      if (!window.indexedDB) return res(null);
+      const req = indexedDB.open('cpns_fast_media_v1', 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('files');
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = () => res(null);
+    }));
+  };
+  return {
+    async get(k) {
+      const db = await open(); if (!db) return null;
+      return new Promise(res => {
+        try {
+          const r = db.transaction('files', 'readonly').objectStore('files').get(k);
+          r.onsuccess = () => res(r.result || null);
+          r.onerror = () => res(null);
+        } catch (e) { res(null); }
+      });
+    },
+    async set(k, v) {
+      const db = await open(); if (!db) return;
+      try { db.transaction('files', 'readwrite').objectStore('files').put(v, k); } catch (e) {}
+    }
+  };
+})();
+
+function cacheKey(key) { return 'c_' + (S.user ? S.user.id : '') + '_' + key; }
+function getLocalCache(key) {
+  const k = cacheKey(key);
+  if (window.appState[k] !== undefined) return window.appState[k];
+  const raw = lsGet(k);
+  if (!raw) return null;
+  try { return (window.appState[k] = JSON.parse(raw)); } catch (e) { return null; }
+}
+function setLocalCache(key, data) {
+  const k = cacheKey(key);
+  window.appState[k] = data;
+  lsSet(k, JSON.stringify(data));
+}
+
+/** Stale-While-Revalidate Instan (0ms dari RAM window.appState -> localStorage -> Server) */
 function swr(key, action, payload, render) {
-  const nav = S.nav, k = 'c_' + (S.user ? S.user.id : '') + '_' + key, c = lsGet(k);
-  if (c) { try { render(JSON.parse(c), true); } catch (e) { /* cache rusak */ } }
+  const nav = S.nav, hit = getLocalCache(key);
+  if (hit !== null) {
+    try { render(hit, true); } catch (e) { /* abaikan */ }
+  } else {
+    const v = $('#view');
+    if (v && !v.innerHTML.trim()) v.innerHTML = skel(6);
+  }
   return call(action, payload).then(d => {
-    if (nav !== S.nav) return d;
-    lsSet(k, JSON.stringify(d)); render(d, false); return d;
-  }).catch(e => { if (nav === S.nav && !c) viewError(e); });
+    setLocalCache(key, d);
+    if (nav === S.nav) render(d, false);
+    return d;
+  }).catch(e => { if (nav === S.nav && hit === null) viewError(e); });
 }
 function viewError(e) {
   const v = $('#view'); if (!v) return;
@@ -158,7 +211,14 @@ function csvDownload(nama, rows) { dlBlob(nama, ['﻿' + rows.map(r => r.map(csv
 function fileToB64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('Gagal membaca berkas.')); r.readAsDataURL(file); }); }
 function imgLoad(soalId) {
   if (S.imgs[soalId]) return S.imgs[soalId];
-  return (S.imgs[soalId] = call('gambar', { soalId }, { retry: 2 }).then(r => r ? r.uri : null).catch(e => { delete S.imgs[soalId]; throw e; }));
+  return (S.imgs[soalId] = (async () => {
+    const cached = await idbMedia.get('img_' + soalId);
+    if (cached) return cached;
+    const r = await call('gambar', { soalId }, { retry: 2 });
+    const uri = r ? r.uri : null;
+    if (uri) idbMedia.set('img_' + soalId, uri);
+    return uri;
+  })().catch(e => { delete S.imgs[soalId]; throw e; }));
 }
 ACT.showImg = async (id, el) => {
   const box = document.getElementById('img_' + id); if (!box) return;
@@ -223,8 +283,11 @@ SUB.login = async f => {
   try {
     const r = await rpc('login', f.email.value, f.password.value);
     if (!r.success) throw new Error(r.message);
-    S.token = r.data.token; S.user = r.data.user; S.cfg = r.data.config;
-    lsSet('cpns_tok', S.token); lsSet('cpns_user', JSON.stringify(S.user));
+    S.token = r.data.token; S.user = r.data.user; S.cfg = r.data.config || S.cfg;
+    lsSet('cpns_tok', S.token);
+    lsSet('cpns_user', JSON.stringify(S.user));
+    lsSet('cpns_cfg', JSON.stringify(S.cfg));
+    if (r.data.boot) hydrateBootData(r.data.boot);
     startApp();
   } catch (e) { ferr(f, e.message); setBusy(b, false); }
 };
@@ -258,9 +321,11 @@ function forceLogout(msg) {
   hideLoader(); closeModal(); destroyCharts(); mountAuth('login'); toast(msg || 'Sesi berakhir. Silakan masuk kembali.', 'bad');
 }
 ACT.logout = async () => {
-  const t = S.token; try { await rpc('api', t, 'logout', {}); } catch (e) { /* abaikan */ }
+  const t = S.token;
+  window.appState = {};
   Object.keys(localStorage).filter(k => k.indexOf('c_') === 0).forEach(k => lsDel(k));
   lsDel('cpns_tok'); lsDel('cpns_user'); lsDel('cpns_exam_active'); S.token = null; S.user = null; destroyCharts(); mountAuth('login'); toast('Anda telah keluar.', 'ok');
+  rpc('api', t, 'logout', {}).catch(() => {});
 };
 
 /* ============================================================
@@ -300,24 +365,63 @@ function go(page, params) {
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.p === act));
   $$('#bnav button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === act));
   const t = $('#ttl'); if (t) t.textContent = TITLES[page] || '';
-  const v = $('#view'); v.innerHTML = skel(6); window.scrollTo(0, 0);
+  const v = $('#view');
+  const keyMap = { beranda: 'home', paket: 'paket', riwayat: 'riwayat', peringkat: 'rank_' + (S.st.rk || ''), materi: 'materi', adminDash: 'adash', paketAdmin: 'padm' };
+  if (!keyMap[page] || getLocalCache(keyMap[page]) === null) v.innerHTML = skel(6);
+  window.scrollTo(0, 0);
   try { VIEWS[page](S.params); } catch (e) { viewError(e); }
 }
 
 /* ============================================================
-   PENGENALAN (BOOT)
+   PENGENALAN (BOOT INSTAN 0ms + BACKGROUND PREFETCH)
    ============================================================ */
-function startApp() {
-  mountShell(); go(defaultPage());
-  const active = lsGet('cpns_exam_active');
-  if (active) { try { const a = JSON.parse(active); startExam(a.paketId, true); } catch (e) { lsDel('cpns_exam_active'); } }
-  call('me').then(d => { S.user = d.user; S.cfg = d.config; lsSet('cpns_user', JSON.stringify(S.user)); }).catch(() => {});
+function hydrateBootData(b) {
+  if (!b) return;
+  if (b.user) { S.user = b.user; lsSet('cpns_user', JSON.stringify(S.user)); }
+  if (b.config) { S.cfg = b.config; lsSet('cpns_cfg', JSON.stringify(S.cfg)); }
+  ['home', 'paket', 'riwayat', 'rank_', 'materi', 'adash', 'padm'].forEach(k => {
+    if (b[k] !== undefined) setLocalCache(k, b[k]);
+  });
+  if (b.matAdm) { S.matAdm = b.matAdm; S.matOpt = b.matAdm; }
 }
-(async function init() {
+
+function startApp() {
+  mountShell();
+  go(defaultPage());
+  const active = lsGet('cpns_exam_active');
+  if (active) {
+    try { const a = JSON.parse(active); startExam(a.paketId, true); return; }
+    catch (e) { lsDel('cpns_exam_active'); }
+  }
+  call('bootSync').then(b => {
+    hydrateBootData(b);
+    if (S.page === defaultPage()) VIEWS[S.page](S.params);
+  }).catch(() => {
+    call('me').then(d => {
+      S.user = d.user; S.cfg = d.config;
+      lsSet('cpns_user', JSON.stringify(S.user));
+      lsSet('cpns_cfg', JSON.stringify(S.cfg));
+    }).catch(() => {});
+  });
+}
+
+(function init() {
   S.token = lsGet('cpns_tok');
   try { S.user = JSON.parse(lsGet('cpns_user') || 'null'); } catch (e) { S.user = null; }
-  try { const r = await rpc('publicInit'); if (r && r.success) S.cfg = r.data; } catch (e) { /* tetap lanjut */ }
-  if (S.token && S.user) startApp(); else mountAuth('login');
+  try { S.cfg = JSON.parse(lsGet('cpns_cfg') || '{}') || {}; } catch (e) { S.cfg = {}; }
+
+  // 1. Render UI secara INSTAN (0 ms) tanpa menunggu server!
+  if (S.token && S.user) startApp();
+  else mountAuth('login');
+
+  // 2. Segarkan konfigurasi publik di latar belakang (non-blocking)
+  rpc('publicInit').then(r => {
+    if (r && r.success && r.data) {
+      S.cfg = r.data;
+      lsSet('cpns_cfg', JSON.stringify(S.cfg));
+      if (!S.token && $('.auth')) mountAuth('login');
+    }
+  }).catch(() => {});
 })();
 
 /* ============================================================
@@ -581,7 +685,10 @@ ACT.exRetry = () => { closeModal(); submitExam(true); };
 S.st.hf = 'Semua';
 VIEWS.hasil = p => {
   S.st.hf = 'Semua';
-  call('hasilSesi', { sesiId: p.id }).then(d => { if (S.page !== 'hasil') return; S.hasil = d; drawHasil(); }).catch(e => { if (S.page === 'hasil') viewError(e); });
+  swr('hasil_' + p.id, 'hasilSesi', { sesiId: p.id }, d => {
+    if (S.page !== 'hasil') return;
+    S.hasil = d; drawHasil();
+  });
 };
 function drawHasil() {
   const d = S.hasil, v = $('#view'), maxT = d.max || 1, pct = d.total / maxT * 100;
@@ -762,7 +869,12 @@ ACT.materiBaca = async id => {
   if (closeBtn) closeBtn.dataset.act = 'ebkClose';
 
   try {
-    const r = await call('materiFile', { id }, { retry: 1 }); if (tok !== S.pdfTok) return;
+    let r = await idbMedia.get('pdf_' + id);
+    if (!r) {
+      r = await call('materiFile', { id }, { retry: 1 });
+      if (r && r.base64) idbMedia.set('pdf_' + id, r);
+    }
+    if (tok !== S.pdfTok) return;
     const bin = atob(r.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     const lib = await loadPdfJs(); if (tok !== S.pdfTok) return;
     const doc = await lib.getDocument({ data: u8 }).promise; if (tok !== S.pdfTok) return;
@@ -1428,7 +1540,7 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=6').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=7').then(reg => {
       reg.update();
     }).catch(() => {});
   });

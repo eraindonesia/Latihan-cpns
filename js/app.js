@@ -412,24 +412,6 @@ function startApp() {
   });
 }
 
-(function init() {
-  S.token = lsGet('cpns_tok');
-  try { S.user = JSON.parse(lsGet('cpns_user') || 'null'); } catch (e) { S.user = null; }
-  try { S.cfg = JSON.parse(lsGet('cpns_cfg') || '{}') || {}; } catch (e) { S.cfg = {}; }
-
-  // 1. Render UI secara INSTAN (0 ms) tanpa menunggu server!
-  if (S.token && S.user) startApp();
-  else mountAuth('login');
-
-  // 2. Segarkan konfigurasi publik di latar belakang (non-blocking)
-  rpc('publicInit').then(r => {
-    if (r && r.success && r.data) {
-      S.cfg = r.data;
-      lsSet('cpns_cfg', JSON.stringify(S.cfg));
-      if (!S.token && $('.auth')) mountAuth('login');
-    }
-  }).catch(() => {});
-})();
 
 /* ============================================================
    PESERTA — BERANDA
@@ -1666,7 +1648,7 @@ ACT.emailLog = async () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=9').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=10').then(reg => {
       reg.update();
     }).catch(() => {});
   });
@@ -1719,3 +1701,23 @@ ACT.bukaMateriDariHasil = async id => {
   }
   ACT.materiBaca(id);
 };
+
+/* ---------- Inisialisasi Aplikasi (dijalankan setelah semua VIEWS terdaftar) ---------- */
+(function init() {
+  S.token = lsGet('cpns_tok');
+  try { S.user = JSON.parse(lsGet('cpns_user') || 'null'); } catch (e) { S.user = null; }
+  try { S.cfg = JSON.parse(lsGet('cpns_cfg') || '{}') || {}; } catch (e) { S.cfg = {}; }
+
+  // 1. Render UI secara INSTAN (0 ms) tanpa menunggu server!
+  if (S.token && S.user) startApp();
+  else mountAuth('login');
+
+  // 2. Segarkan konfigurasi publik di latar belakang (non-blocking)
+  rpc('publicInit').then(r => {
+    if (r && r.success && r.data) {
+      S.cfg = r.data;
+      lsSet('cpns_cfg', JSON.stringify(S.cfg));
+      if (!S.token && $('.auth')) mountAuth('login');
+    }
+  }).catch(() => {});
+})();

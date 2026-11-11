@@ -1,12 +1,12 @@
 {
-  "id": "/",
+  "id": "./",
   "name": "Aplikasi Latihan CPNS 2026 — Simulasi CAT SKD",
   "short_name": "Latihan CPNS",
   "description": "Portal Simulasi CAT SKD CPNS (TWK, TIU, TKP) & Evaluasi Kompetensi Mandiri.",
   "lang": "id-ID",
   "dir": "ltr",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
   "display_override": [
     "fullscreen",

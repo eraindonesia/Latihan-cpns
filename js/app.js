@@ -1111,10 +1111,10 @@ function drawPeserta() {
   const d = S.psData, box = $('#psBox'); if (!box) return;
   const allOn = d.rows.length && d.rows.every(r => selPs[r.id]);
   box.innerHTML = '<div class="tabs mb">' + ['Semua', 'Menunggu', 'Aktif', 'Ditolak', 'Nonaktif'].map(t => '<button class="tab ' + (S.st.ps.status === t ? 'on' : '') + '" data-act="psTab" data-arg="' + t + '">' + t + '<span class="n">' + d.cnt[t] + '</span></button>').join('') + '</div>' +
-    bulkBar(selPs, '<button class="btn sm ok-solid" data-act="psBulk" data-arg="Aktif">Setujui</button><button class="btn sm danger-solid" data-act="psBulk" data-arg="Ditolak">Tolak</button><button class="btn sm ghost" style="color:#fff" data-act="psBulk" data-arg="Nonaktif">Nonaktifkan</button>') +
+    bulkBar(selPs, '<button class="btn sm ok-solid" data-act="psBulk" data-arg="Aktif">Setujui</button><button class="btn sm danger-solid" data-act="psBulk" data-arg="Ditolak">Tolak</button><button class="btn sm ghost" style="color:#fff" data-act="psBulk" data-arg="Nonaktif">Nonaktifkan</button><button class="btn sm danger-solid" data-act="psHapusBulk"><i class="bi bi-trash"></i> Hapus</button>') +
     (d.rows.length ? '<div class="tw"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" data-chg="psSelAll" ' + (allOn ? 'checked' : '') + ' aria-label="Pilih semua"></th><th>Peserta</th><th>Instansi</th><th>Status</th><th class="num">Latihan</th><th class="num">Rata-rata</th><th>Daftar</th><th class="act">Aksi</th></tr></thead><tbody>' +
       d.rows.map(r => '<tr><td><input type="checkbox" data-chg="psSel" data-id="' + r.id + '" ' + (selPs[r.id] ? 'checked' : '') + ' ' + (r.id === S.user.id ? 'disabled' : '') + ' aria-label="Pilih ' + esc(r.nama) + '"></td><td><div class="row gap-s">' + avatar(r.nama) + '<div><b>' + esc(r.nama) + '</b>' + (r.role === 'Admin' ? ' ' + stChip('Berjalan').replace('Berjalan', 'Admin') : '') + '<div class="muted sm">' + esc(r.email) + '</div></div></div></td><td>' + esc(r.instansi || '-') + '</td><td>' + stChip(r.status) + '</td><td class="num">' + r.latihan + '</td><td class="num">' + nf(r.rata) + '</td><td>' + fmtD(r.daftar) + '</td><td class="act">' +
-        (r.status === 'Menunggu' ? '<button class="btn sm ok-solid" data-act="pesertaAksi" data-arg="' + r.id + ':Aktif">Setujui</button> <button class="btn sm danger" data-act="pesertaAksi" data-arg="' + r.id + ':Ditolak">Tolak</button> ' : '') + '<button class="btn sm ghost" data-act="psDetail" data-arg="' + r.id + '">Detail</button></td></tr>').join('') + '</tbody></table></div>' + pager(d.total, d.page, d.size, 'psPage')
+        (r.status === 'Menunggu' ? '<button class="btn sm ok-solid" data-act="pesertaAksi" data-arg="' + r.id + ':Aktif">Setujui</button> <button class="btn sm danger" data-act="pesertaAksi" data-arg="' + r.id + ':Ditolak">Tolak</button> ' : '') + '<button class="btn sm ghost" data-act="psDetail" data-arg="' + r.id + '">Detail</button>' + (r.id !== S.user.id ? ' <button class="btn sm danger" data-act="psHapus" data-arg="' + r.id + '" title="Hapus peserta" aria-label="Hapus peserta"><i class="bi bi-trash"></i></button>' : '') + '</td></tr>').join('') + '</tbody></table></div>' + pager(d.total, d.page, d.size, 'psPage')
       : '<div class="card">' + empty('bi-people', 'Tidak ada peserta', 'Ubah filter atau kata kunci pencarian.') + '</div>');
 }
 INP.psQ = debounce(v => { S.st.ps.q = v; S.st.ps.page = 1; loadPeserta(); }, 300);
@@ -1135,6 +1135,27 @@ ACT.pesertaAksi = async arg => {
   if (await setPesertaStatus([id], st)) { if (S.page === 'adminDash') go('adminDash'); else { if ($('.mback')) closeModal(); loadPeserta(); } }
 };
 ACT.psBulk = async st => { if (await setPesertaStatus(Object.keys(selPs), st)) { selPs = {}; loadPeserta(); } };
+function resetCache() {
+  window.appState = {};
+  Object.keys(localStorage).filter(k => k.indexOf('c_') === 0).forEach(k => lsDel(k));
+}
+async function hapusPeserta(ids) {
+  ids = ids.filter(i => i !== S.user.id);
+  if (!ids.length) return;
+  const row = ids.length === 1 && S.psData ? S.psData.rows.find(r => r.id === ids[0]) : null;
+  const nama = ids.length === 1 ? (row ? row.nama : 'akun ini') : ids.length + ' akun';
+  const ok = await confirmBox('Hapus <b>' + esc(nama) + '</b> secara permanen?<br><span class="muted sm">Seluruh riwayat sesi dan jawaban milik akun ini ikut terhapus dan tidak dapat dikembalikan. Untuk sekadar menutup akses, gunakan <i>Nonaktifkan</i>.</span>', { danger: true, yes: 'Ya, Hapus', title: 'Hapus Peserta' });
+  if (!ok) return;
+  showLoader('Menghapus…');
+  try {
+    const r = await call('pesertaHapus', { ids });
+    hideLoader(); resetCache(); selPs = {}; S.st.ps.page = 1;
+    toast(r.dihapus + ' akun dihapus.', 'ok');
+    loadPeserta();
+  } catch (e) { hideLoader(); toast(e.message, 'bad'); }
+}
+ACT.psHapus = id => hapusPeserta([id]);
+ACT.psHapusBulk = () => hapusPeserta(Object.keys(selPs));
 ACT.psTambah = (arg, el, e, role) => {
   openModal({ title: 'Tambah Akun', body: '<form id="fTambah" data-sub="psTambah" novalidate><div class="ferr" role="alert"></div>' + fl('Nama Lengkap', inpH('nama', '', 'required')) + fl('Email', inpH('email', '', 'type="email" required autocomplete="off"')) + fl('Instansi (opsional)', inpH('instansi', '')) + '<div class="grid2">' + fl('Password Awal', inpH('password', '', 'type="text" required minlength="8" autocomplete="off"'), 'Min. 8 karakter, huruf & angka') + fl('Peran', selH('role', ['Peserta', 'Admin'], role || 'Peserta')) + '</div></form>', foot: '<button class="btn ghost" data-act="closeModal">Batal</button><button class="btn primary" type="submit" form="fTambah">Simpan Akun</button>' });
 };
@@ -1311,7 +1332,7 @@ ACT.csvGo = async el => {
 VIEWS.paketAdmin = () => swr('padm', 'paketAdmin', {}, d => {
   if (S.page !== 'paketAdmin') return;
   S.padm = d;
-  $('#view').innerHTML = pageHead('Konten', 'Paket & Tryout', 'Susun paket latihan dan jadwalkan tryout.', '<button class="btn primary" data-act="paketForm"><i class="bi bi-plus-lg"></i> Buat Paket</button>') +
+  $('#view').innerHTML = pageHead('Konten', 'Paket & Tryout', 'Susun paket latihan dan jadwalkan tryout.', '<button class="btn ghost" data-act="paketAuto"><i class="bi bi-magic"></i> Buat Otomatis</button><button class="btn primary" data-act="paketForm"><i class="bi bi-plus-lg"></i> Buat Paket</button>') +
     (d.length ? '<div class="pkgrid">' + d.map(p => '<div class="card pk"><div class="row">' + stChip(p.jenis) + stChip(p.status) + (p.live ? stChip('Berlangsung') : '') + '</div><h4>' + esc(p.nama) + '</h4><p>' + esc(p.deskripsi || '') + '</p><div class="row wrap gap-s">' + ['TWK', 'TIU', 'TKP'].filter(k => p.komp[k]).map(k => katChip(k) + '<span class="sm">' + p.komp[k] + '</span>').join(' ') + '</div>' +
       '<div class="meta"><span><i class="bi bi-list-check"></i>' + p.jumlah + ' soal</span><span><i class="bi bi-clock"></i>' + p.durasi + ' mnt</span><span><i class="bi bi-people"></i>' + p.peserta + ' peserta</span><span><i class="bi bi-graph-up"></i>rata ' + nf(p.rata) + '</span></div>' + (p.jenis === 'Tryout' ? '<div class="muted sm"><i class="bi bi-calendar-event"></i> ' + fmtDT(p.tgl_mulai) + ' → ' + fmtDT(p.tgl_selesai) + '</div>' : '') +
       '<div class="foot"><button class="btn sm ghost" data-act="paketStatus" data-arg="' + p.id + ':' + (p.status === 'Aktif' ? 'Nonaktif' : 'Aktif') + '">' + (p.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan') + '</button><span class="sp"></span><button class="icon-btn" data-act="paketForm" data-arg="' + p.id + '" aria-label="Ubah" title="Ubah"><i class="bi bi-pencil"></i></button><button class="icon-btn" data-act="paketHapus" data-arg="' + p.id + '" aria-label="Hapus" title="Hapus"><i class="bi bi-trash"></i></button></div></div>').join('') + '</div>' : '<div class="card">' + empty('bi-layers', 'Belum ada paket', 'Buat paket pertama dari soal di bank soal.') + '</div>');
@@ -1491,6 +1512,72 @@ SUB.paketForm = async f => {
   catch (e) { ferr(f, e.message); setBusy(b, false); const m = $('.mbody'); if (m) m.scrollTop = 0; }
 };
 
+/* ---- Paket otomatis (Tryout 30/35/45 · Latihan 5/10/15) ---- */
+const KOMP = { Tryout: { TWK: 30, TIU: 35, TKP: 45 }, Latihan: { TWK: 5, TIU: 10, TKP: 15 } };
+const DEF = { Tryout: { nama: 'Tryout SKD Otomatis', durasi: 100 }, Latihan: { nama: 'Latihan SKD Otomatis', durasi: 30 } };
+function renderAutoInfo() {
+  const f = $('#fAuto'), box = $('#autoInfo'); if (!f || !box) return;
+  const komp = KOMP[f.jenis.value], st = S.autoInfo && S.autoInfo.stok;
+  const total = komp.TWK + komp.TIU + komp.TKP;
+  box.innerHTML = ['TWK', 'TIU', 'TKP'].map(k => {
+    const need = komp[k], have = st ? st[k].tersedia : null;
+    const badge = have === null ? '' : have >= need ? '<span class="chip s-ok">Cukup</span>' : '<span class="chip s-bad">Kurang ' + (need - have) + '</span>';
+    return '<div class="row mb">' + katChip(k) + '<b>' + need + ' soal</b><span class="sp muted sm">' + (st ? 'tersedia ' + have + ' soal · ' + st[k].subtopik + ' subtopik' : 'memeriksa stok…') + '</span>' + badge + '</div>';
+  }).join('') + '<div class="muted sm">Total ' + total + ' soal. Soal yang sudah dipakai paket lain tidak diambil.</div>';
+}
+CHG.autoJenis = v => {
+  const f = $('#fAuto'); if (!f) return;
+  const other = v === 'Tryout' ? 'Latihan' : 'Tryout';
+  if (!f.nama.value.trim() || f.nama.value === DEF[other].nama) f.nama.value = DEF[v].nama;
+  if (+f.durasi.value === DEF[other].durasi) f.durasi.value = DEF[v].durasi;
+  $('#autoJadwal').classList.toggle('hide', v !== 'Tryout');
+  renderAutoInfo();
+};
+ACT.paketAuto = () => {
+  S.autoInfo = null;
+  const now = Date.now();
+  openModal({
+    title: 'Buat Paket Otomatis', size: 'wide',
+    body: '<form id="fAuto" data-sub="paketAuto" novalidate><div class="ferr" role="alert"></div>' +
+      '<div class="banner"><i class="bi bi-magic"></i><div>Soal dipilih otomatis dari bank soal berstatus <b>Aktif</b>. Subtopik di tiap kategori dibagi merata.</div></div>' +
+      '<div class="grid2">' + fl('Jenis Paket', selH('jenis', [['Tryout', 'Tryout — TWK 30 · TIU 35 · TKP 45'], ['Latihan', 'Latihan — TWK 5 · TIU 10 · TKP 15']], 'Tryout', 'data-chg="autoJenis"')) + fl('Durasi (menit)', inpH('durasi', DEF.Tryout.durasi, 'type="number" min="1" max="300" required')) + '</div>' +
+      fl('Nama Paket', inpH('nama', DEF.Tryout.nama, 'maxlength="120" required')) +
+      '<div id="autoJadwal" class="grid2">' + fl('Mulai Akses', inpH('tgl_mulai', toLocalInput(now), 'type="datetime-local"')) + fl('Tutup Akses', inpH('tgl_selesai', toLocalInput(now + 7 * 86400000), 'type="datetime-local"')) + '</div>' +
+      '<div class="grid2">' + fl('Status', selH('status', ['Aktif', 'Draft', 'Nonaktif'], 'Aktif')) + fl('Tampilkan Pembahasan', selH('tampil', [['Langsung', 'Langsung setelah selesai'], ['Setelah Ditutup', 'Setelah tryout ditutup']], 'Langsung')) + '</div>' +
+      swH('acak_soal', 'Acak urutan soal', true, 'Diacak di dalam tiap kategori') + swH('acak_opsi', 'Acak urutan opsi', true, 'Hanya TWK & TIU') +
+      '<h4 class="mb mt">Komposisi & Stok Soal</h4><div id="autoInfo"></div></form>',
+    foot: '<button class="btn ghost" data-act="closeModal">Batal</button><button class="btn primary" type="submit" form="fAuto"><i class="bi bi-magic"></i> Buat Paket</button>'
+  });
+  renderAutoInfo();
+  call('paketOtomatisInfo', {}).then(d => { S.autoInfo = d; renderAutoInfo(); })
+    .catch(e => { const b = $('#autoInfo'); if (b) b.innerHTML = '<div class="ferr">' + esc(e.message) + '</div>'; });
+};
+SUB.paketAuto = async f => {
+  ferr(f, '');
+  const jenis = f.jenis.value, dur = Math.floor(+f.durasi.value);
+  if (!f.nama.value.trim()) return ferr(f, 'Nama paket wajib diisi.');
+  if (!(dur >= 1 && dur <= 300)) return ferr(f, 'Durasi harus 1–300 menit.');
+  const d = { jenis, nama: f.nama.value, durasi: dur, status: f.status.value, tampil: f.tampil.value, acak_soal: f.acak_soal.checked ? 'Ya' : 'Tidak', acak_opsi: f.acak_opsi.checked ? 'Ya' : 'Tidak' };
+  if (jenis === 'Tryout') {
+    d.tgl_mulai = f.tgl_mulai.value ? new Date(f.tgl_mulai.value).getTime() : 0;
+    d.tgl_selesai = f.tgl_selesai.value ? new Date(f.tgl_selesai.value).getTime() : 0;
+    if (!d.tgl_mulai || !d.tgl_selesai) return ferr(f, 'Tryout wajib memiliki jadwal mulai dan tutup akses.');
+    if (d.tgl_selesai <= d.tgl_mulai) return ferr(f, 'Tutup akses harus setelah waktu mulai.');
+  }
+  const b = $('button[type=submit]', $('.mfoot')); setBusy(b, true, 'Menyusun soal…');
+  try {
+    const r = await call('paketOtomatis', d);
+    resetCache(); delete S.soalRingkas; delete S.padm;
+    closeModal(); go('paketAdmin');
+    toast('Paket "' + r.nama + '" dibuat (' + r.jumlah + ' soal).', 'ok');
+    const rows = Object.keys(r.subtopik).map(k => {
+      const m = r.subtopik[k], n = Object.keys(m).reduce((a, s) => a + m[s], 0);
+      return '<div class="mb"><div class="row gap-s">' + katChip(k) + '<b>' + n + ' soal</b></div><div class="muted sm">' + Object.keys(m).map(s => esc(s) + ' (' + m[s] + ')').join(' · ') + '</div></div>';
+    }).join('');
+    openModal({ title: 'Paket Berhasil Dibuat', body: '<p class="mb"><b>' + esc(r.nama) + '</b></p><h4 class="mb">Sebaran Subtopik</h4>' + rows, foot: '<button class="btn primary" data-act="closeModal">Selesai</button>' });
+  } catch (e) { ferr(f, e.message); setBusy(b, false); }
+};
+
 /* ============================================================
    ADMIN — MATERI
    ============================================================ */
@@ -1639,7 +1726,7 @@ ACT.emailLog = async () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=12').then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=13').then(reg => {
       reg.update();
     }).catch(() => {});
   });
